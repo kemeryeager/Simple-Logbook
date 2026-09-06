@@ -21,26 +21,24 @@
 ├── App.js                         # Root entry wrapped in SafeAreaProvider & SettingsProvider
 ├── app.json                       # Expo config (v1.1.0), package name & EAS projectId
 ├── eas.json                       # Build configurations (preview profile creates standalone APK)
-├── data/
-│   └── destinations.js            # Curated offline travel directory (39 cities, 240+ places, search utilities)
 ├── contexts/
 │   └── SettingsContext.js         # Theme management (Light/Dark/System), active language, token dictionary
 ├── utils/
 │   ├── storage.js                 # Centralized CRUD for Trips, Places, Expenses & Currency Helpers
-│   └── translations.js            # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
+│   ├── translations.js            # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
+│   └── overpassService.js         # Live OpenStreetMap & Overpass API engine with offline caching
 ├── components/
 │   ├── ModalSheet.js              # Bottom sheet modal with PanResponder swipe-to-dismiss & keyboard safety
 │   ├── DatePickerModal.js         # Interactive visual monthly calendar picker (no manual date typing)
-│   ├── CityAutocompleteInput.js   # Live city autocomplete with flags, aliases, and popular city chips
-│   ├── ExplorePlacesModal.js      # Curated attraction browser with one-tap "Add to Route" action
+│   ├── ExplorePlacesModal.js      # Live OSM places explorer (Cafes, Restaurants, Museums, Parks) + One-tap Add
 │   ├── SettingsModal.js           # Appearance (Light/Dark/System) & Language switcher sheet
 │   ├── BudgetProgress.js          # Real-time animated budget progress bar with multi-currency alerts
 │   ├── TripCard.js                # Memoized route card with dates, city badge & deletion
 │   ├── PlaceCard.js               # Visited spot card with category badge, notes & date
 │   └── ExpenseCard.js             # Expense item card with category icon & formatted currency
 └── screens/
-    ├── TripListScreen.js          # Main screen: trip list, search filter, new trip modal with city autocomplete
-    └── TripDetailScreen.js        # Detail screen: places vs expenses tabs, explore guide trigger, budget header
+    ├── TripListScreen.js          # Main screen: trip list, search filter, new trip modal, settings trigger
+    └── TripDetailScreen.js        # Detail screen: places vs expenses tabs, live guide trigger, budget header
 ```
 
 ---
