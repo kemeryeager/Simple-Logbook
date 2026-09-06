@@ -50,17 +50,18 @@ export default function ModalSheet({
   useEffect(() => {
     if (visible) {
       setShowModal(true);
+      slideAnim.setValue(SCREEN_HEIGHT * 0.4);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           damping: 24,
           stiffness: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     } else if (showModal) {
@@ -68,16 +69,17 @@ export default function ModalSheet({
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 160,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT * 0.4,
           duration: 180,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start(() => {
         setShowModal(false);
         setKeyboardHeight(0);
+        slideAnim.setValue(SCREEN_HEIGHT * 0.4);
       });
     }
   }, [visible]);
@@ -88,26 +90,31 @@ export default function ModalSheet({
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 160,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT * 0.4,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       setShowModal(false);
       setKeyboardHeight(0);
+      slideAnim.setValue(SCREEN_HEIGHT * 0.4);
       if (onClose) onClose();
     });
   };
 
-  // PanResponder to handle drag-down to dismiss gesture
+  // Robust PanResponder to handle drag-down-to-dismiss gesture on Android and iOS
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        return Math.abs(gestureState.dy) > 3;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 3;
       },
       onPanResponderGrant: () => {
         slideAnim.stopAnimation();
@@ -115,19 +122,30 @@ export default function ModalSheet({
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) {
           slideAnim.setValue(gestureState.dy);
+        } else {
+          // slight elastic resistance when dragging up
+          slideAnim.setValue(gestureState.dy * 0.12);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 110 || gestureState.vy > 0.5) {
+        if (gestureState.dy > 65 || gestureState.vy > 0.32) {
           requestClose();
         } else {
           Animated.spring(slideAnim, {
             toValue: 0,
             damping: 24,
-            stiffness: 220,
-            useNativeDriver: true,
+            stiffness: 240,
+            useNativeDriver: false,
           }).start();
         }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          damping: 24,
+          stiffness: 240,
+          useNativeDriver: false,
+        }).start();
       },
     })
   ).current;
@@ -185,65 +203,76 @@ export default function ModalSheet({
               },
             ]}
           >
-            {/* Top Drag Indicator & Header (Swipe down enabled) */}
-            <View {...panResponder.panHandlers} collapsable={false}>
-              <View style={styles.handleContainer}>
-                <View
-                  style={[
-                    styles.dragHandle,
-                    theme && { backgroundColor: theme.border },
-                  ]}
-                />
-              </View>
-
-              {/* Sheet Header */}
+            {/* Top Draggable Header Area (Covers handle and title area) */}
+            <View
+              style={[
+                styles.headerWrapper,
+                theme && { borderBottomColor: theme.borderMuted },
+              ]}
+            >
+              {/* Entire header surface is draggable */}
               <View
-                style={[
-                  styles.header,
-                  theme && { borderBottomColor: theme.borderMuted },
-                ]}
+                {...panResponder.panHandlers}
+                style={styles.draggableHeaderArea}
+                collapsable={false}
               >
-                <View style={styles.headerTextCol}>
-                  {title ? (
-                    <Text
-                      style={[
-                        styles.title,
-                        theme && { color: theme.textPrimary },
-                      ]}
-                    >
-                      {title}
-                    </Text>
-                  ) : null}
-                  {subtitle ? (
-                    <Text
-                      style={[
-                        styles.subtitle,
-                        theme && { color: theme.textMuted },
-                      ]}
-                    >
-                      {subtitle}
-                    </Text>
-                  ) : null}
+                {/* Drag Handle Bar */}
+                <View style={styles.handleContainer}>
+                  <View
+                    style={[
+                      styles.dragHandle,
+                      theme && { backgroundColor: theme.border },
+                    ]}
+                  />
                 </View>
 
-                <Pressable
-                  onPress={requestClose}
-                  hitSlop={10}
-                  style={({ pressed }) => [
-                    styles.closeButton,
-                    theme && { backgroundColor: theme.btnSecondaryBg },
-                    pressed && {
-                      backgroundColor: theme ? theme.border : '#E4E4E7',
-                    },
-                  ]}
-                >
-                  <X
-                    size={16}
-                    color={theme ? theme.textMuted : '#71717A'}
-                    strokeWidth={2.4}
-                  />
-                </Pressable>
+                {/* Title & Subtitle */}
+                <View style={styles.headerContentRow}>
+                  <View style={styles.headerTextCol}>
+                    {title ? (
+                      <Text
+                        style={[
+                          styles.title,
+                          theme && { color: theme.textPrimary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {title}
+                      </Text>
+                    ) : null}
+                    {subtitle ? (
+                      <Text
+                        style={[
+                          styles.subtitle,
+                          theme && { color: theme.textMuted },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {subtitle}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
               </View>
+
+              {/* Close Button - Positioned absolutely at top right, outside panResponder */}
+              <Pressable
+                onPress={requestClose}
+                hitSlop={12}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  theme && { backgroundColor: theme.btnSecondaryBg },
+                  pressed && {
+                    backgroundColor: theme ? theme.border : '#E4E4E7',
+                  },
+                ]}
+              >
+                <X
+                  size={16}
+                  color={theme ? theme.textMuted : '#71717A'}
+                  strokeWidth={2.4}
+                />
+              </Pressable>
             </View>
 
             {/* Scrollable Children */}
@@ -289,29 +318,34 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 24,
   },
-  handleContainer: {
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: '#D4D4D8',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  headerWrapper: {
+    position: 'relative',
     borderBottomWidth: 1,
     borderBottomColor: '#F4F4F5',
   },
+  draggableHeaderArea: {
+    width: '100%',
+    paddingBottom: 12,
+  },
+  handleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 48,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D4D4D8',
+  },
+  headerContentRow: {
+    paddingLeft: 20,
+    paddingRight: 60, // leaves room for the close button
+  },
   headerTextCol: {
-    flex: 1,
-    marginRight: 12,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 17,
@@ -325,12 +359,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeButton: {
-    width: 30,
-    height: 30,
+    position: 'absolute',
+    right: 16,
+    bottom: 12,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   scrollContent: {
     paddingHorizontal: 20,
