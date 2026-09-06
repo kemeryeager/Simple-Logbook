@@ -25,6 +25,7 @@ export default function ModalSheet({
   children,
   theme,
   scrollable = true,
+  height,
 }) {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
@@ -205,6 +206,11 @@ export default function ModalSheet({
               },
               {
                 maxHeight: contentMaxHeight,
+                ...(height
+                  ? { height }
+                  : !scrollable
+                  ? { height: Math.min(SCREEN_HEIGHT * 0.78, contentMaxHeight) }
+                  : {}),
                 transform: [{ translateY: slideAnim }],
               },
             ]}

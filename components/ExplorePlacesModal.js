@@ -352,6 +352,7 @@ export default function ExplorePlacesModal({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     gap: 12,
   },
   searchContainer: {
@@ -422,11 +423,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   placesList: {
-    maxHeight: 340,
+    flex: 1,
   },
   placesListContent: {
     gap: 8,
-    paddingBottom: 8,
+    paddingBottom: 20,
   },
   placeItemCard: {
     flexDirection: 'row',

@@ -236,6 +236,7 @@ export default function CityPickerModal({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     gap: 12,
   },
   searchContainer: {
@@ -285,14 +286,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   resultsWrap: {
+    flex: 1,
     gap: 6,
   },
   resultsList: {
-    maxHeight: 250,
+    flex: 1,
   },
   resultsListContent: {
     gap: 6,
-    paddingBottom: 6,
+    paddingBottom: 20,
   },
   cityRow: {
     flexDirection: 'row',

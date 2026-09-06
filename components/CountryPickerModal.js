@@ -171,6 +171,7 @@ export default function CountryPickerModal({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     gap: 12,
   },
   searchContainer: {
@@ -222,11 +223,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   countriesList: {
-    maxHeight: 330,
+    flex: 1,
   },
   countriesListContent: {
     gap: 6,
-    paddingBottom: 6,
+    paddingBottom: 20,
   },
   countryRow: {
     flexDirection: 'row',
