@@ -23,7 +23,6 @@ import {
   Compass,
   CreditCard,
   FileText,
-  Sparkles,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BudgetProgress from '../components/BudgetProgress';
@@ -31,7 +30,6 @@ import PlaceCard from '../components/PlaceCard';
 import ExpenseCard from '../components/ExpenseCard';
 import ModalSheet from '../components/ModalSheet';
 import DatePickerModal from '../components/DatePickerModal';
-import ExplorePlacesModal from '../components/ExplorePlacesModal';
 import { useSettings } from '../contexts/SettingsContext';
 import {
   formatDateRange,
@@ -113,9 +111,6 @@ export default function TripDetailScreen({
 
   // Date Picker State ('place' | 'expense' | null)
   const [datePickerTarget, setDatePickerTarget] = useState(null);
-
-  // Explore Places Guide Modal State
-  const [isExploreModalVisible, setIsExploreModalVisible] = useState(false);
 
   // FAB scale animation
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -240,24 +235,6 @@ export default function TripDetailScreen({
       );
     },
     [t, loadTripData]
-  );
-
-  const handleExploreAddPlace = useCallback(
-    async (placeObj) => {
-      try {
-        await savePlace({
-          tripId: currentTrip.id,
-          name: placeObj.name,
-          category: placeObj.category || 'place_cat_other',
-          notes: placeObj.notes || '',
-          date: placeObj.date || currentTrip.startDate || new Date().toISOString().split('T')[0],
-        });
-        await loadTripData();
-      } catch (err) {
-        Alert.alert(t('error_generic'), t('error_place_save'));
-      }
-    },
-    [currentTrip.id, currentTrip.startDate, loadTripData, t]
   );
 
   // Expense Handlers
@@ -737,92 +714,6 @@ export default function TripDetailScreen({
                 </>
               )}
             </ScrollView>
-
-            {/* Prominent Explore Guide Button (Places tab) */}
-            {activeTab === 'places' && (
-              <Pressable
-                onPress={() => setIsExploreModalVisible(true)}
-                style={({ pressed }) => [
-                  styles.exploreGuideBanner,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                  },
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
-                ]}
-              >
-                <View style={styles.exploreGuideLeft}>
-                  <View
-                    style={[
-                      styles.exploreGuideIconCircle,
-                      { backgroundColor: isDark ? '#14532D' : '#DCFCE7' },
-                    ]}
-                  >
-                    <Sparkles
-                      size={17}
-                      color={isDark ? '#4ADE80' : '#16A34A'}
-                      strokeWidth={2.2}
-                    />
-                  </View>
-                  <View style={styles.exploreGuideTextCol}>
-                    <View style={styles.exploreGuideTitleRow}>
-                      <Text
-                        style={[
-                          styles.exploreGuideTitle,
-                          { color: theme.textPrimary },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {t('explore_places', 'Rehberden Keşfet')}
-                      </Text>
-                      {currentTrip.city ? (
-                        <View
-                          style={[
-                            styles.exploreCityBadge,
-                            { backgroundColor: isDark ? '#27272A' : '#F4F4F5' },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.exploreCityBadgeText,
-                              { color: theme.textSecondary },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {currentTrip.city}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text
-                      style={[
-                        styles.exploreGuideSubtitle,
-                        { color: theme.textMuted },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {t('explore_places_subtitle', 'Popüler yerleri inceleyin ve rotanıza ekleyin')}
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.exploreGuideActionPill,
-                    { backgroundColor: theme.btnPrimaryBg },
-                  ]}
-                >
-                  <Compass size={13} color={theme.btnPrimaryText} strokeWidth={2.2} />
-                  <Text
-                    style={[
-                      styles.exploreGuideActionText,
-                      { color: theme.btnPrimaryText },
-                    ]}
-                  >
-                    {t('explore_btn', 'Göz At')}
-                  </Text>
-                </View>
-              </Pressable>
-            )}
           </View>
         }
         ListEmptyComponent={
@@ -845,21 +736,6 @@ export default function TripDetailScreen({
                   ? t('no_places_subtitle')
                   : t('no_expenses_subtitle')}
               </Text>
-              {activeTab === 'places' && (
-                <Pressable
-                  onPress={() => setIsExploreModalVisible(true)}
-                  style={({ pressed }) => [
-                    styles.emptyExploreBtn,
-                    { backgroundColor: theme.btnPrimaryBg },
-                    pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                  ]}
-                >
-                  <Sparkles size={15} color={theme.btnPrimaryText} strokeWidth={2.2} />
-                  <Text style={[styles.emptyExploreBtnText, { color: theme.btnPrimaryText }]}>
-                    {t('explore_places', 'Rehberden Keşfet')}
-                  </Text>
-                </Pressable>
-              )}
             </View>
           )
         }
@@ -1347,19 +1223,6 @@ export default function TripDetailScreen({
           }
         }}
       />
-
-      {/* Explore Places Curated Guide Modal */}
-      <ExplorePlacesModal
-        visible={isExploreModalVisible}
-        onClose={() => setIsExploreModalVisible(false)}
-        city={currentTrip?.city || ''}
-        existingPlaceNames={places.map((p) => p.name)}
-        onAddPlace={handleExploreAddPlace}
-        tripStartDate={currentTrip?.startDate}
-        theme={theme}
-        t={t}
-        language={language}
-      />
     </View>
   );
 }
@@ -1633,92 +1496,5 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  exploreGuideBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginTop: 10,
-    marginBottom: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  exploreGuideLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  exploreGuideIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  exploreGuideTextCol: {
-    flex: 1,
-  },
-  exploreGuideTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
-  },
-  exploreGuideTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  exploreCityBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    maxWidth: 100,
-  },
-  exploreCityBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  exploreGuideSubtitle: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  exploreGuideActionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    gap: 5,
-  },
-  exploreGuideActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  emptyExploreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    gap: 7,
-    marginTop: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  emptyExploreBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
   },
 });
