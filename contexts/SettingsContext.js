@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStoragePackage from '@react-native-async-storage/async-storage';
 
 // Safe AsyncStorage resolver for both Metro bundler and Node/Jest testing
@@ -83,10 +84,12 @@ export const TRANSLATIONS = {
     appearance: 'Görünüm',
     appearanceDesc: 'Uygulama renk teması',
     theme: 'Tema',
-    darkMode: 'Karanlık Tema',
+    darkMode: 'Karanlık',
     darkModeDesc: 'Gece kullanımı için koyu renk paleti',
-    lightMode: 'Aydınlık Tema',
+    lightMode: 'Aydınlık',
     lightModeDesc: 'Ferah ve aydınlık renk paleti',
+    autoMode: 'Otomatik',
+    autoModeDesc: 'Cihaz temasını izler',
     language: 'Dil',
     languageDesc: 'Uygulama arayüz dili',
     active: 'Aktif',
@@ -141,10 +144,12 @@ export const TRANSLATIONS = {
     appearance: 'Appearance',
     appearanceDesc: 'App color theme',
     theme: 'Theme',
-    darkMode: 'Dark Mode',
+    darkMode: 'Dark',
     darkModeDesc: 'Dark color palette for night use',
-    lightMode: 'Light Mode',
+    lightMode: 'Light',
     lightModeDesc: 'Crisp and bright color palette',
+    autoMode: 'Auto',
+    autoModeDesc: 'Follows device theme',
     language: 'Language',
     languageDesc: 'App display language',
     active: 'Active',
@@ -196,10 +201,12 @@ export const TRANSLATIONS = {
     appearance: 'Apariencia',
     appearanceDesc: 'Tema de color de la aplicación',
     theme: 'Tema',
-    darkMode: 'Modo Oscuro',
+    darkMode: 'Oscuro',
     darkModeDesc: 'Paleta de colores oscuros para la noche',
-    lightMode: 'Modo Claro',
+    lightMode: 'Claro',
     lightModeDesc: 'Paleta fresca y luminosa',
+    autoMode: 'Auto',
+    autoModeDesc: 'Sigue el tema del dispositivo',
     language: 'Idioma',
     languageDesc: 'Idioma de la interfaz',
     active: 'Activo',
@@ -251,10 +258,12 @@ export const TRANSLATIONS = {
     appearance: 'Erscheinungsbild',
     appearanceDesc: 'Farbschema der App',
     theme: 'Design',
-    darkMode: 'Dunkelmodus',
+    darkMode: 'Dunkel',
     darkModeDesc: 'Dunkle Farbpalette für die Nacht',
-    lightMode: 'Hellmodus',
+    lightMode: 'Hell',
     lightModeDesc: 'Helle und freundliche Farbpalette',
+    autoMode: 'Auto',
+    autoModeDesc: 'Folgt dem Gerätedesign',
     language: 'Sprache',
     languageDesc: 'App-Anzeigesprache',
     active: 'Aktiv',
@@ -306,10 +315,12 @@ export const TRANSLATIONS = {
     appearance: 'Apparence',
     appearanceDesc: "Thème de couleur de l'application",
     theme: 'Thème',
-    darkMode: 'Mode Sombre',
+    darkMode: 'Sombre',
     darkModeDesc: 'Palette de couleurs sombres pour la nuit',
-    lightMode: 'Mode Clair',
+    lightMode: 'Clair',
     lightModeDesc: 'Palette de couleurs claire et nette',
+    autoMode: 'Auto',
+    autoModeDesc: "Suit le thème de l'appareil",
     language: 'Langue',
     languageDesc: "Langue d'affichage",
     active: 'Actif',
@@ -361,10 +372,12 @@ export const TRANSLATIONS = {
     appearance: '外観',
     appearanceDesc: 'アプリのカラーテーマ',
     theme: 'テーマ',
-    darkMode: 'ダークモード',
+    darkMode: 'ダーク',
     darkModeDesc: '夜間に適したダークカラーパレット',
-    lightMode: 'ライトモード',
+    lightMode: 'ライト',
     lightModeDesc: '明るく清潔感のあるカラーパレット',
+    autoMode: '自動',
+    autoModeDesc: '端末の設定に連動',
     language: '言語',
     languageDesc: 'アプリの表示言語',
     active: '有効',
@@ -415,7 +428,8 @@ export const TRANSLATIONS = {
 export const SettingsContext = createContext(null);
 
 export function SettingsProvider({ children }) {
-  const [themeMode, setThemeMode] = useState('light');
+  const systemColorScheme = useColorScheme(); // 'light' | 'dark' | null
+  const [themeMode, setThemeMode] = useState('system'); // 'system' | 'light' | 'dark'
   const [language, setLanguageState] = useState('tr');
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
@@ -428,7 +442,7 @@ export function SettingsProvider({ children }) {
         if (raw && isMounted) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
-            if (parsed.themeMode === 'light' || parsed.themeMode === 'dark') {
+            if (parsed.themeMode === 'light' || parsed.themeMode === 'dark' || parsed.themeMode === 'system') {
               setThemeMode(parsed.themeMode);
             }
             if (parsed.language && VALID_LANGUAGE_CODES.includes(parsed.language)) {
@@ -466,7 +480,7 @@ export function SettingsProvider({ children }) {
   // Theme controls
   const setTheme = useCallback(
     (mode) => {
-      if (mode !== 'light' && mode !== 'dark') return;
+      if (mode !== 'light' && mode !== 'dark' && mode !== 'system') return;
       setThemeMode(mode);
       persistSettings(mode, language);
     },
@@ -475,11 +489,12 @@ export function SettingsProvider({ children }) {
 
   const toggleTheme = useCallback(() => {
     setThemeMode((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark';
+      const currentEffective = prev === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : prev;
+      const next = currentEffective === 'dark' ? 'light' : 'dark';
       persistSettings(next, language);
       return next;
     });
-  }, [language, persistSettings]);
+  }, [systemColorScheme, language, persistSettings]);
 
   // Language controls
   const setLanguage = useCallback(
@@ -491,9 +506,17 @@ export function SettingsProvider({ children }) {
     [themeMode, persistSettings]
   );
 
+  // Effective theme calculation based on system mode or manual override
+  const effectiveThemeKey = useMemo(() => {
+    if (themeMode === 'system') {
+      return systemColorScheme === 'dark' ? 'dark' : 'light';
+    }
+    return themeMode;
+  }, [themeMode, systemColorScheme]);
+
   // Active theme tokens
-  const theme = useMemo(() => THEMES[themeMode] || LIGHT_THEME, [themeMode]);
-  const isDark = themeMode === 'dark';
+  const theme = useMemo(() => THEMES[effectiveThemeKey] || LIGHT_THEME, [effectiveThemeKey]);
+  const isDark = effectiveThemeKey === 'dark';
 
   // Translation helper bound to current language
   const t = useCallback(
@@ -535,6 +558,7 @@ export function SettingsProvider({ children }) {
   const value = useMemo(
     () => ({
       themeMode,
+      effectiveThemeKey,
       theme,
       isDark,
       toggleTheme,
@@ -545,7 +569,7 @@ export function SettingsProvider({ children }) {
       languages: SUPPORTED_LANGUAGES,
       isSettingsLoaded,
     }),
-    [themeMode, theme, isDark, toggleTheme, setTheme, language, setLanguage, t, isSettingsLoaded]
+    [themeMode, effectiveThemeKey, theme, isDark, toggleTheme, setTheme, language, setLanguage, t, isSettingsLoaded]
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
