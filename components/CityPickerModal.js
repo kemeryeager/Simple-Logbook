@@ -13,6 +13,7 @@ import ModalSheet from './ModalSheet';
 import {
   fetchAllCitiesForCountry,
   filterAndRankCities,
+  getCountryNameInLang,
 } from '../utils/geoService';
 
 export default function CityPickerModal({
@@ -23,10 +24,17 @@ export default function CityPickerModal({
   onSelectCity,
   theme,
   t,
+  language = 'tr',
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [allCities, setAllCities] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Localized country name based on active app language
+  const localizedCountryName = useMemo(() => {
+    if (!country) return '';
+    return getCountryNameInLang(country, language) || country.displayName || country.name || '';
+  }, [country, language]);
 
   // Fetch all cities and districts for the country when opened
   useEffect(() => {
@@ -77,7 +85,11 @@ export default function CityPickerModal({
       visible={visible}
       onClose={onClose}
       title={country ? `${country.flag} ${t('select_city', 'Şehir / İlçe Seçin')}` : t('select_city', 'Şehir / İlçe Seçin')}
-      subtitle={country ? `${country.name} içerisindeki rotanızı belirleyin` : ''}
+      subtitle={
+        country
+          ? t('select_city_subtitle_with_country', { country: localizedCountryName })
+          : t('select_city_subtitle', 'Rotanızı belirleyecek şehri seçin')
+      }
       theme={theme}
       scrollable={false}
     >
@@ -97,7 +109,7 @@ export default function CityPickerModal({
             style={[styles.searchInput, { color: theme.textPrimary }]}
             placeholder={
               country
-                ? `${country.name} içinde şehir veya ilçe ara...`
+                ? t('search_city_in_country', { country: localizedCountryName })
                 : t('search_city', 'Şehir veya ilçe ara...')
             }
             placeholderTextColor={theme.textMuted}
@@ -117,7 +129,7 @@ export default function CityPickerModal({
           <View style={styles.centerBox}>
             <ActivityIndicator size="small" color={theme.textPrimary} />
             <Text style={[styles.statusText, { color: theme.textMuted }]}>
-              {country?.name} şehir ve ilçeleri yükleniyor...
+              {t('loading_cities_for_country', { country: localizedCountryName })}
             </Text>
           </View>
         ) : displayedCities.length === 0 ? (
@@ -125,8 +137,8 @@ export default function CityPickerModal({
             <AlertCircle size={24} color={theme.textMuted} strokeWidth={1.8} />
             <Text style={[styles.statusText, { color: theme.textSecondary }]}>
               {searchQuery.trim()
-                ? `"${searchQuery}" ile eşleşen şehir veya ilçe bulunamadı.`
-                : 'Şehir ve ilçe listesi bulunamadı.'}
+                ? t('no_cities_found_for_query', { query: searchQuery.trim() })
+                : t('no_cities_found', 'Şehir ve ilçe listesi bulunamadı.')}
             </Text>
             {searchQuery.trim().length > 0 && (
               <Pressable
@@ -134,7 +146,7 @@ export default function CityPickerModal({
                 style={[styles.customCityBtn, { backgroundColor: theme.btnPrimaryBg }]}
               >
                 <Text style={[styles.customCityBtnText, { color: theme.btnPrimaryText }]}>
-                  "{searchQuery.trim()}" Olarak Ekle
+                  {t('add_custom_city_btn', { city: searchQuery.trim() })}
                 </Text>
               </Pressable>
             )}

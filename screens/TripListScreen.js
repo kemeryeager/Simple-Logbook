@@ -34,6 +34,7 @@ import CountryPickerModal from '../components/CountryPickerModal';
 import CityPickerModal from '../components/CityPickerModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
+import { getCountryNameInLang } from '../utils/geoService';
 
 export default function TripListScreen({ onSelectTrip }) {
   const insets = useSafeAreaInsets();
@@ -451,7 +452,7 @@ export default function TripListScreen({ onSelectTrip }) {
                   <>
                     <Text style={styles.selectorFlag}>{selectedCountry.flag}</Text>
                     <Text style={[styles.selectorText, { color: theme.textPrimary }]}>
-                      {selectedCountry.displayName || selectedCountry.name}
+                      {getCountryNameInLang(selectedCountry, language) || selectedCountry.displayName || selectedCountry.name}
                     </Text>
                   </>
                 ) : (
@@ -498,7 +499,9 @@ export default function TripListScreen({ onSelectTrip }) {
                 ) : (
                   <Text style={[styles.selectorText, { color: theme.textMuted }]}>
                     {selectedCountry
-                      ? `${selectedCountry.name} içinde şehir seçin...`
+                      ? t('select_city_in_country_placeholder', {
+                          country: getCountryNameInLang(selectedCountry, language) || selectedCountry.displayName || selectedCountry.name,
+                        })
                       : t('select_country_first', 'Önce yukarıdan ülke seçin')}
                   </Text>
                 )}
@@ -701,6 +704,7 @@ export default function TripListScreen({ onSelectTrip }) {
         }}
         theme={theme}
         t={t}
+        language={language}
       />
     </View>
   );

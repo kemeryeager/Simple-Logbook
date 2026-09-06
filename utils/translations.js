@@ -64,6 +64,13 @@ export const translations = {
     search_city: "Şehir veya ilçe ara...",
     popular_cities: "Popüler Turistik Şehirler",
     select_country_first: "Önce yukarıdan ülke seçin",
+    search_city_in_country: "{country} içinde şehir veya ilçe ara...",
+    select_city_subtitle_with_country: "{country} içerisindeki rotanızı belirleyin",
+    select_city_in_country_placeholder: "{country} içinde şehir seçin...",
+    loading_cities_for_country: "{country} şehir ve ilçeleri yükleniyor...",
+    no_cities_found_for_query: '"{query}" ile eşleşen şehir veya ilçe bulunamadı.',
+    no_cities_found: "Şehir ve ilçe listesi bulunamadı.",
+    add_custom_city_btn: '"{city}" Olarak Ekle',
 
     // App Branding
     app_name: 'Simple Logbook',
@@ -215,6 +222,13 @@ export const translations = {
     search_city: "Search city or district...",
     popular_cities: "Popular Tourist Cities",
     select_country_first: "Select a country first",
+    search_city_in_country: "Search city or district in {country}...",
+    select_city_subtitle_with_country: "Choose your route in {country}",
+    select_city_in_country_placeholder: "Select city in {country}...",
+    loading_cities_for_country: "Loading cities and districts for {country}...",
+    no_cities_found_for_query: 'No city or district matching "{query}" found.',
+    no_cities_found: "City and district list not found.",
+    add_custom_city_btn: 'Add as "{city}"',
 
     // App Branding
     app_name: 'Simple Logbook',
@@ -366,6 +380,13 @@ export const translations = {
     search_city: "Buscar ciudad o distrito...",
     popular_cities: "Ciudades Turísticas Populares",
     select_country_first: "Primero selecciona un país",
+    search_city_in_country: "Buscar ciudad o distrito en {country}...",
+    select_city_subtitle_with_country: "Elige tu ruta en {country}",
+    select_city_in_country_placeholder: "Seleccionar ciudad en {country}...",
+    loading_cities_for_country: "Cargando ciudades y distritos de {country}...",
+    no_cities_found_for_query: 'No se encontraron ciudades o distritos para "{query}".',
+    no_cities_found: "Lista de ciudades y distritos no encontrada.",
+    add_custom_city_btn: 'Añadir como "{city}"',
 
     // App Branding
     app_name: 'Simple Logbook',
@@ -517,6 +538,13 @@ export const translations = {
     search_city: "Stadt oder Bezirk suchen...",
     popular_cities: "Beliebte Touristenstädte",
     select_country_first: "Wählen Sie zuerst ein Land aus",
+    search_city_in_country: "Stadt oder Bezirk in {country} suchen...",
+    select_city_subtitle_with_country: "Wählen Sie Ihre Route in {country}",
+    select_city_in_country_placeholder: "Stadt in {country} auswählen...",
+    loading_cities_for_country: "Städte und Bezirke für {country} werden geladen...",
+    no_cities_found_for_query: 'Keine Stadt oder Bezirk für "{query}" gefunden.',
+    no_cities_found: "Städte- und Bezirksliste nicht gefunden.",
+    add_custom_city_btn: 'Als "{city}" hinzufügen',
 
     // App Branding
     app_name: 'Simple Logbook',
@@ -668,6 +696,13 @@ export const translations = {
     search_city: "Rechercher une ville ou un district...",
     popular_cities: "Villes touristiques populaires",
     select_country_first: "Sélectionnez d'abord un pays",
+    search_city_in_country: "Rechercher une ville ou un district en {country}...",
+    select_city_subtitle_with_country: "Définissez votre itinéraire en {country}",
+    select_city_in_country_placeholder: "Sélectionner une ville en {country}...",
+    loading_cities_for_country: "Chargement des villes et districts de {country}...",
+    no_cities_found_for_query: 'Aucune ville ou district trouvé pour "{query}".',
+    no_cities_found: "Liste des villes et districts introuvable.",
+    add_custom_city_btn: 'Ajouter comme "{city}"',
 
     // App Branding
     app_name: 'Simple Logbook',
@@ -819,6 +854,13 @@ export const translations = {
     search_city: "都市または地域を検索...",
     popular_cities: "人気の観光都市",
     select_country_first: "最初に国を選択してください",
+    search_city_in_country: "{country}の都市または地域を検索...",
+    select_city_subtitle_with_country: "{country}内のルートを設定してください",
+    select_city_in_country_placeholder: "{country}の都市を選択...",
+    loading_cities_for_country: "{country}の都市と地域を読み込み中...",
+    no_cities_found_for_query: '「{query}」に一致する都市または地域は見つかりませんでした。',
+    no_cities_found: "都市と地域の一覧が見つかりませんでした。",
+    add_custom_city_btn: '「{city}」として追加',
 
     // App Branding
     app_name: 'Simple Logbook',
