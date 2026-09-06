@@ -102,7 +102,7 @@ const getCategoryConfig = (category, isDark, language) => {
   };
 };
 
-export default function PlaceCard({ place, onDelete, onPress }) {
+function PlaceCard({ place, onDelete, onPress }) {
   const { theme, t, isDark, language } = useSettings();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const config = getCategoryConfig(place.category, isDark, language);
@@ -280,3 +280,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default React.memo(PlaceCard);

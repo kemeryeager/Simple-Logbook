@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -210,27 +210,30 @@ export default function TripDetailScreen({
     }
   };
 
-  const handleDeletePlace = (placeId) => {
-    Alert.alert(
-      t('confirm_delete_place_title'),
-      t('confirm_delete_place_msg'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deletePlace(placeId);
-              await loadTripData();
-            } catch (err) {
-              Alert.alert(t('error_generic'), t('error_place_delete'));
-            }
+  const handleDeletePlace = useCallback(
+    (placeId) => {
+      Alert.alert(
+        t('confirm_delete_place_title'),
+        t('confirm_delete_place_msg'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deletePlace(placeId);
+                await loadTripData();
+              } catch (err) {
+                Alert.alert(t('error_generic'), t('error_place_delete'));
+              }
+            },
           },
-        },
-      ]
-    );
-  };
+        ]
+      );
+    },
+    [t, loadTripData]
+  );
 
   // Expense Handlers
   const handleOpenAddExpense = () => {
@@ -268,27 +271,30 @@ export default function TripDetailScreen({
     }
   };
 
-  const handleDeleteExpense = (expenseId) => {
-    Alert.alert(
-      t('confirm_delete_expense_title'),
-      t('confirm_delete_expense_msg'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteExpense(expenseId);
-              await loadTripData();
-            } catch (err) {
-              Alert.alert(t('error_generic'), t('error_expense_delete'));
-            }
+  const handleDeleteExpense = useCallback(
+    (expenseId) => {
+      Alert.alert(
+        t('confirm_delete_expense_title'),
+        t('confirm_delete_expense_msg'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteExpense(expenseId);
+                await loadTripData();
+              } catch (err) {
+                Alert.alert(t('error_generic'), t('error_expense_delete'));
+              }
+            },
           },
-        },
-      ]
-    );
-  };
+        ]
+      );
+    },
+    [t, loadTripData]
+  );
 
   const handleDeleteCurrentTrip = () => {
     Alert.alert(
@@ -313,21 +319,46 @@ export default function TripDetailScreen({
   };
 
   // Filtered Lists supporting both category keys and legacy Turkish strings
-  const filteredPlaces = places.filter((p) => {
-    if (selectedPlaceCategory === 'all') return true;
-    return (
-      p.category === selectedPlaceCategory ||
-      translatePlaceCategory(p.category, 'en') === translatePlaceCategory(selectedPlaceCategory, 'en')
-    );
-  });
+  const filteredPlaces = useMemo(() => {
+    if (selectedPlaceCategory === 'all') return places;
+    return places.filter((p) => {
+      return (
+        p.category === selectedPlaceCategory ||
+        translatePlaceCategory(p.category, 'en') === translatePlaceCategory(selectedPlaceCategory, 'en')
+      );
+    });
+  }, [places, selectedPlaceCategory]);
 
-  const filteredExpenses = expenses.filter((e) => {
-    if (selectedExpenseCategory === 'all') return true;
-    return (
-      e.category === selectedExpenseCategory ||
-      translateExpenseCategory(e.category, 'en') === translateExpenseCategory(selectedExpenseCategory, 'en')
-    );
-  });
+  const filteredExpenses = useMemo(() => {
+    if (selectedExpenseCategory === 'all') return expenses;
+    return expenses.filter((e) => {
+      return (
+        e.category === selectedExpenseCategory ||
+        translateExpenseCategory(e.category, 'en') === translateExpenseCategory(selectedExpenseCategory, 'en')
+      );
+    });
+  }, [expenses, selectedExpenseCategory]);
+
+  const renderDetailItem = useCallback(
+    ({ item }) => {
+      if (activeTab === 'places') {
+        return (
+          <PlaceCard
+            place={item}
+            onDelete={() => handleDeletePlace(item.id)}
+          />
+        );
+      }
+      return (
+        <ExpenseCard
+          expense={item}
+          currency={currentTrip.currency || '₺'}
+          onDelete={() => handleDeleteExpense(item.id)}
+        />
+      );
+    },
+    [activeTab, currentTrip.currency, handleDeletePlace, handleDeleteExpense]
+  );
 
   const handleFabPressIn = () => {
     Animated.spring(fabScale, {
@@ -406,6 +437,11 @@ export default function TripDetailScreen({
       <FlatList
         data={activeTab === 'places' ? filteredPlaces : filteredExpenses}
         keyExtractor={(item) => item.id}
+        renderItem={renderDetailItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -672,23 +708,6 @@ export default function TripDetailScreen({
             </ScrollView>
           </View>
         }
-        renderItem={({ item }) => {
-          if (activeTab === 'places') {
-            return (
-              <PlaceCard
-                place={item}
-                onDelete={() => handleDeletePlace(item.id)}
-              />
-            );
-          }
-          return (
-            <ExpenseCard
-              expense={item}
-              currency={currentTrip.currency || '₺'}
-              onDelete={() => handleDeleteExpense(item.id)}
-            />
-          );
-        }}
         ListEmptyComponent={
           !loading && (
             <View style={styles.emptyContainer}>

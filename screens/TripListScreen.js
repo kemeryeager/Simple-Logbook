@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -128,35 +128,52 @@ export default function TripListScreen({ onSelectTrip }) {
     }
   };
 
-  const handleDeleteTrip = (trip) => {
-    Alert.alert(
-      t('confirm_delete_trip_title'),
-      t('confirm_delete_trip_msg', { title: trip.title }),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTrip(trip.id);
-              await loadData();
-            } catch (err) {
-              Alert.alert(t('error_generic'), t('error_trip_delete'));
-            }
+  const handleDeleteTrip = useCallback(
+    (trip) => {
+      Alert.alert(
+        t('confirm_delete_trip_title'),
+        t('confirm_delete_trip_msg', { title: trip.title }),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteTrip(trip.id);
+                await loadData();
+              } catch (err) {
+                Alert.alert(t('error_generic'), t('error_trip_delete'));
+              }
+            },
           },
-        },
-      ]
-    );
-  };
+        ]
+      );
+    },
+    [t, loadData]
+  );
 
-  const filteredTrips = trips.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const matchTitle = item.title?.toLowerCase().includes(query);
-    const matchCity = item.city?.toLowerCase().includes(query);
-    return matchTitle || matchCity;
-  });
+  const filteredTrips = useMemo(() => {
+    if (!searchQuery.trim()) return trips;
+    const query = searchQuery.toLowerCase().trim();
+    return trips.filter((item) => {
+      const matchTitle = item.title?.toLowerCase().includes(query);
+      const matchCity = item.city?.toLowerCase().includes(query);
+      return matchTitle || matchCity;
+    });
+  }, [trips, searchQuery]);
+
+  const renderTripItem = useCallback(
+    ({ item }) => (
+      <TripCard
+        trip={item}
+        stats={tripStats[item.id]}
+        onPress={() => onSelectTrip(item)}
+        onDelete={handleDeleteTrip}
+      />
+    ),
+    [tripStats, onSelectTrip, handleDeleteTrip]
+  );
 
   const handleFabPressIn = () => {
     Animated.spring(fabScale, {
@@ -244,14 +261,11 @@ export default function TripListScreen({ onSelectTrip }) {
       <FlatList
         data={filteredTrips}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TripCard
-            trip={item}
-            stats={tripStats[item.id]}
-            onPress={() => onSelectTrip(item)}
-            onDelete={handleDeleteTrip}
-          />
-        )}
+        renderItem={renderTripItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={[
           styles.listContent,
           filteredTrips.length === 0 && styles.listContentEmpty,

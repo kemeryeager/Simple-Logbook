@@ -9,7 +9,7 @@ export const formatCurrency = (amount, currency = '₺', lang = 'tr') => {
   return formatCurrencyWithLocale(amount, currency, lang);
 };
 
-export default function BudgetProgress({
+function BudgetProgress({
   budget = 0,
   totalSpent = 0,
   currency = '₺',
@@ -371,3 +371,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+export default React.memo(BudgetProgress);

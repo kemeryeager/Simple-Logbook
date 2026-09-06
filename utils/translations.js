@@ -1,5 +1,5 @@
 /**
- * RotaDefteri - Internationalization (i18n) Dictionary & Helpers
+ * Simple Logbook - Internationalization (i18n) Dictionary & Helpers
  * Supports 6 languages:
  *  - tr: Türkçe (Default)
  *  - en: English
@@ -53,7 +53,7 @@ export const translations = {
   // ==========================================
   tr: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: 'Gezi & Seyahat Not Defteri',
 
     // Navigation & Actions
@@ -179,7 +179,7 @@ export const translations = {
   // ==========================================
   en: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: 'Travel & Route Diary',
 
     // Navigation & Actions
@@ -305,7 +305,7 @@ export const translations = {
   // ==========================================
   es: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: 'Cuaderno de Viajes y Rutas',
 
     // Navigation & Actions
@@ -431,7 +431,7 @@ export const translations = {
   // ==========================================
   de: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: 'Reise- & Routentagebuch',
 
     // Navigation & Actions
@@ -557,7 +557,7 @@ export const translations = {
   // ==========================================
   fr: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: "Carnet de Voyage & d'Itinéraires",
 
     // Navigation & Actions
@@ -683,7 +683,7 @@ export const translations = {
   // ==========================================
   ja: {
     // App Branding
-    app_name: 'RotaDefteri',
+    app_name: 'Simple Logbook',
     app_tagline: '旅行＆ルートノート',
 
     // Navigation & Actions

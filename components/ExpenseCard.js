@@ -108,7 +108,7 @@ const getExpenseCategoryConfig = (category, isDark, language) => {
   };
 };
 
-export default function ExpenseCard({
+function ExpenseCard({
   expense,
   currency = '₺',
   onDelete,
@@ -283,3 +283,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export default React.memo(ExpenseCard);

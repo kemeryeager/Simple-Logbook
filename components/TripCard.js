@@ -16,7 +16,7 @@ export const formatDateRange = (start, end, lang = 'tr') => {
   return formatWithLocale(start, end, lang);
 };
 
-export default function TripCard({
+function TripCard({
   trip,
   stats = { totalSpent: 0, percent: 0 },
   onPress,
@@ -215,3 +215,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export default React.memo(TripCard);
