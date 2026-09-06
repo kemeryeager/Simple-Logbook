@@ -26,14 +26,17 @@
 ├── utils/
 │   ├── storage.js                 # Centralized CRUD for Trips, Places, Expenses & Currency Helpers
 │   ├── translations.js            # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
+│   ├── geoService.js              # World countries, popular cities & live OSM Nominatim country-scoped search
 │   └── overpassService.js         # Live OpenStreetMap & Overpass API engine with offline caching
 ├── components/
 │   ├── ModalSheet.js              # Bottom sheet modal with PanResponder swipe-to-dismiss & keyboard safety
 │   ├── DatePickerModal.js         # Interactive visual monthly calendar picker (no manual date typing)
+│   ├── CountryPickerModal.js      # Full world country picker with search & popular country chips
+│   ├── CityPickerModal.js         # Country-scoped city picker with popular chips & live OSM city search
 │   ├── ExplorePlacesModal.js      # Live OSM places explorer (Cafes, Restaurants, Museums, Parks) + One-tap Add
 │   ├── SettingsModal.js           # Appearance (Light/Dark/System) & Language switcher sheet
 │   ├── BudgetProgress.js          # Real-time animated budget progress bar with multi-currency alerts
-│   ├── TripCard.js                # Memoized route card with dates, city badge & deletion
+│   ├── TripCard.js                # Memoized route card with dates, city & country badge, and deletion
 │   ├── PlaceCard.js               # Visited spot card with category badge, notes & date
 │   └── ExpenseCard.js             # Expense item card with category icon & formatted currency
 └── screens/
@@ -50,7 +53,9 @@ All operations are asynchronous and persist into AsyncStorage:
 - **Trip:**
   - `id`: `string` (UUID/timestamp)
   - `title`: `string` (e.g., "Paris Vacation")
-  - `city`: `string` (e.g., "Paris, France")
+  - `country`: `string` (e.g., "Fransa")
+  - `countryCode`: `string` (e.g., "FR")
+  - `city`: `string` (e.g., "Paris")
   - `startDate`: `string` (`YYYY-MM-DD`)
   - `endDate`: `string` (`YYYY-MM-DD`)
   - `budget`: `number` (Default: `0`)
