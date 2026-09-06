@@ -208,21 +208,6 @@ export default function TripListScreen({ onSelectTrip }) {
           >
             <Settings size={18} color={theme.textPrimary} strokeWidth={2.2} />
           </Pressable>
-
-          {/* New Trip Button */}
-          <Pressable
-            onPress={handleOpenAddModal}
-            style={({ pressed }) => [
-              styles.headerAddBtn,
-              { backgroundColor: theme.btnPrimaryBg },
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Plus size={15} color={theme.btnPrimaryText} strokeWidth={2.4} />
-            <Text style={[styles.headerAddText, { color: theme.btnPrimaryText }]}>
-              {t('new_trip')}
-            </Text>
-          </Pressable>
         </View>
       </View>
 
@@ -327,22 +312,20 @@ export default function TripListScreen({ onSelectTrip }) {
         }
       />
 
-      {/* Floating Action Button */}
-      {filteredTrips.length > 0 && (
-        <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
-          <Pressable
-            onPress={handleOpenAddModal}
-            onPressIn={handleFabPressIn}
-            onPressOut={handleFabPressOut}
-            style={[styles.fabButton, { backgroundColor: theme.btnPrimaryBg }]}
-          >
-            <Plus size={18} color={theme.btnPrimaryText} strokeWidth={2.4} />
-            <Text style={[styles.fabText, { color: theme.btnPrimaryText }]}>
-              {t('new_trip')}
-            </Text>
-          </Pressable>
-        </Animated.View>
-      )}
+      {/* Floating Action Button (Always at bottom right) */}
+      <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
+        <Pressable
+          onPress={handleOpenAddModal}
+          onPressIn={handleFabPressIn}
+          onPressOut={handleFabPressOut}
+          style={[styles.fabButton, { backgroundColor: theme.btnPrimaryBg }]}
+        >
+          <Plus size={18} color={theme.btnPrimaryText} strokeWidth={2.4} />
+          <Text style={[styles.fabText, { color: theme.btnPrimaryText }]}>
+            {t('new_trip')}
+          </Text>
+        </Pressable>
+      </Animated.View>
 
       {/* Settings Modal */}
       <SettingsModal
@@ -637,24 +620,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerSettingsBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  headerAddText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   searchSection: {
     paddingHorizontal: 16,
