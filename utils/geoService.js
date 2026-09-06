@@ -198,28 +198,67 @@ export function normalizeSearchText(text = '') {
     .replace(/ı/g, 'i');
 }
 
+const displayNamesCache = {};
+
 /**
- * Filter countries by search query:
- * Prioritizes countries whose Turkish or English name STARTS WITH query,
- * followed by countries whose name CONTAINS the query.
+ * Returns the localized country name according to the active app language (e.g. 'de', 'en', 'fr', 'es', 'ja', 'tr').
  */
-export function searchCountries(query = '') {
+export function getCountryNameInLang(country, lang = 'tr') {
+  if (!country) return '';
+  const code = country.code;
+  if (!code) return country.name || '';
+
+  const targetLang = (lang || 'tr').toLowerCase();
+
+  if (!displayNamesCache[targetLang]) {
+    try {
+      displayNamesCache[targetLang] = new Intl.DisplayNames([targetLang], { type: 'region' });
+    } catch (e) {
+      displayNamesCache[targetLang] = null;
+    }
+  }
+
+  if (displayNamesCache[targetLang]) {
+    try {
+      const localized = displayNamesCache[targetLang].of(code);
+      if (localized) return localized;
+    } catch (e) {}
+  }
+
+  return targetLang === 'tr' ? country.name : (country.nameEn || country.name);
+}
+
+/**
+ * Filter countries by search query with active language support:
+ * - Each country displays its localized name at the top.
+ * - English name and ISO code are preserved below.
+ * - Prioritizes countries whose localized name, English name, or ISO code starts with query.
+ * - Sorted alphabetically by the localized name in the active language.
+ */
+export function searchCountries(query = '', lang = 'tr') {
+  const list = WORLD_COUNTRIES.map((c) => ({
+    ...c,
+    displayName: getCountryNameInLang(c, lang),
+  }));
+
+  list.sort((a, b) => a.displayName.localeCompare(b.displayName, lang));
+
   if (!query || !query.trim()) {
-    return WORLD_COUNTRIES;
+    return list;
   }
 
   const q = normalizeSearchText(query);
   const startsWithList = [];
   const containsList = [];
 
-  for (const country of WORLD_COUNTRIES) {
-    const normName = normalizeSearchText(country.name);
+  for (const country of list) {
+    const normDisplayName = normalizeSearchText(country.displayName);
     const normEn = normalizeSearchText(country.nameEn);
     const normCode = country.code.toLowerCase();
 
-    if (normCode === q || normName.startsWith(q) || normEn.startsWith(q)) {
+    if (normCode === q || normDisplayName.startsWith(q) || normEn.startsWith(q)) {
       startsWithList.push(country);
-    } else if (normName.includes(q) || normEn.includes(q)) {
+    } else if (normDisplayName.includes(q) || normEn.includes(q)) {
       containsList.push(country);
     }
   }

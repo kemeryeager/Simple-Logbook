@@ -18,12 +18,13 @@ export default function CountryPickerModal({
   onSelectCountry,
   theme,
   t,
+  language = 'tr',
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredCountries = useMemo(() => {
-    return searchCountries(searchQuery);
-  }, [searchQuery]);
+    return searchCountries(searchQuery, language);
+  }, [searchQuery, language]);
 
   const handleSelect = (country) => {
     if (onSelectCountry) {
@@ -77,6 +78,7 @@ export default function CountryPickerModal({
           style={styles.countriesList}
           contentContainerStyle={styles.countriesListContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => {
             const isSelected = selectedCountryCode === item.code;
             return (
@@ -95,7 +97,7 @@ export default function CountryPickerModal({
                   <Text style={styles.flagText}>{item.flag}</Text>
                   <View style={styles.countryNames}>
                     <Text style={[styles.countryName, { color: theme.textPrimary }]}>
-                      {item.name}
+                      {item.displayName || item.name}
                     </Text>
                     <Text style={[styles.countryNameEn, { color: theme.textMuted }]}>
                       {item.nameEn} ({item.code})

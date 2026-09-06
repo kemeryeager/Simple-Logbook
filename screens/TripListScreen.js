@@ -37,7 +37,7 @@ import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '
 
 export default function TripListScreen({ onSelectTrip }) {
   const insets = useSafeAreaInsets();
-  const { theme, t, isDark } = useSettings();
+  const { theme, t, isDark, language } = useSettings();
   const [trips, setTrips] = useState([]);
   const [tripStats, setTripStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -451,7 +451,7 @@ export default function TripListScreen({ onSelectTrip }) {
                   <>
                     <Text style={styles.selectorFlag}>{selectedCountry.flag}</Text>
                     <Text style={[styles.selectorText, { color: theme.textPrimary }]}>
-                      {selectedCountry.name}
+                      {selectedCountry.displayName || selectedCountry.name}
                     </Text>
                   </>
                 ) : (
@@ -687,6 +687,7 @@ export default function TripListScreen({ onSelectTrip }) {
         }}
         theme={theme}
         t={t}
+        language={language}
       />
 
       {/* City Picker Modal (Filtered strictly to selectedCountry) */}
