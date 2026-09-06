@@ -16,7 +16,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.kemeryeager.simplelogbook"
+      "package": "com.kemeryeager.simplelogbook",
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
