@@ -6,15 +6,10 @@ import {
   FlatList,
   TextInput,
   Pressable,
-  ScrollView,
 } from 'react-native';
-import { Search, Globe, Check, Sparkles, X } from 'lucide-react-native';
+import { Search, Check, X } from 'lucide-react-native';
 import ModalSheet from './ModalSheet';
-import {
-  WORLD_COUNTRIES,
-  POPULAR_COUNTRIES,
-  searchCountries,
-} from '../utils/geoService';
+import { searchCountries } from '../utils/geoService';
 
 export default function CountryPickerModal({
   visible = false,
@@ -74,53 +69,6 @@ export default function CountryPickerModal({
             </Pressable>
           )}
         </View>
-
-        {/* Quick Popular Country Chips */}
-        {searchQuery.length === 0 && (
-          <View style={styles.popularSection}>
-            <View style={styles.popularHeader}>
-              <Sparkles size={12} color={theme.textMuted} strokeWidth={2.2} />
-              <Text style={[styles.popularTitle, { color: theme.textMuted }]}>
-                {t('popular_countries', 'Popüler Ülkeler')}
-              </Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.popularScroll}
-            >
-              {POPULAR_COUNTRIES.slice(0, 8).map((country) => {
-                const isSelected = selectedCountryCode === country.code;
-                return (
-                  <Pressable
-                    key={country.code}
-                    onPress={() => handleSelect(country)}
-                    style={[
-                      styles.popularChip,
-                      {
-                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
-                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.chipFlag}>{country.flag}</Text>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        {
-                          color: isSelected ? theme.btnPrimaryText : theme.textPrimary,
-                          fontWeight: isSelected ? '700' : '500',
-                        },
-                      ]}
-                    >
-                      {country.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
 
         {/* Full Countries List */}
         <FlatList
@@ -187,40 +135,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     padding: 0,
-  },
-  popularSection: {
-    gap: 6,
-  },
-  popularHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 2,
-  },
-  popularTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  popularScroll: {
-    gap: 6,
-    paddingVertical: 2,
-  },
-  popularChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 9,
-    borderWidth: 1,
-  },
-  chipFlag: {
-    fontSize: 14,
-  },
-  chipText: {
-    fontSize: 12,
   },
   countriesList: {
     flex: 1,

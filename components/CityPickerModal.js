@@ -7,56 +7,61 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
-import { Search, MapPin, Check, Sparkles, X, AlertCircle } from 'lucide-react-native';
+import { Search, MapPin, Check, X, AlertCircle } from 'lucide-react-native';
 import ModalSheet from './ModalSheet';
 import {
-  getPopularCitiesForCountry,
-  searchCitiesInCountryOSM,
+  fetchAllCitiesForCountry,
+  filterAndRankCities,
 } from '../utils/geoService';
 
 export default function CityPickerModal({
   visible = false,
   onClose,
-  country = null, // { code, name, flag }
+  country = null, // { code, name, flag, nameEn }
   selectedCity = '',
   onSelectCity,
   theme,
   t,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [osmResults, setOsmResults] = useState([]);
+  const [allCities, setAllCities] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Popular curated cities for this selected country
-  const popularCities = useMemo(() => {
-    if (!country?.code) return [];
-    return getPopularCitiesForCountry(country.code);
-  }, [country]);
-
-  // When search query changes, trigger scoped OSM Nominatim search
+  // Fetch all cities and districts for the country when opened
   useEffect(() => {
-    if (!country?.code || !searchQuery.trim() || searchQuery.trim().length < 2) {
-      setOsmResults([]);
-      setLoading(false);
+    if (!visible || !country?.code) {
+      setSearchQuery('');
       return;
     }
 
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const results = await searchCitiesInCountryOSM(searchQuery.trim(), country.code, 10);
-        setOsmResults(results);
-      } catch (err) {
-        console.warn('OSM search error:', err);
-      } finally {
-        setLoading(false);
-      }
-    }, 350);
+    let isMounted = true;
+    setLoading(true);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, country]);
+    fetchAllCitiesForCountry(country)
+      .then((cities) => {
+        if (isMounted) {
+          setAllCities(cities || []);
+        }
+      })
+      .catch((err) => {
+        console.warn('Error fetching cities:', err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [visible, country]);
+
+  // Ranked and filtered cities
+  const displayedCities = useMemo(() => {
+    return filterAndRankCities(allCities, searchQuery);
+  }, [allCities, searchQuery]);
 
   const handleSelect = (cityName) => {
     if (onSelectCity) {
@@ -93,142 +98,85 @@ export default function CityPickerModal({
             placeholder={
               country
                 ? `${country.name} içinde şehir veya ilçe ara...`
-                : t('search_city', 'Şehir ara...')
+                : t('search_city', 'Şehir veya ilçe ara...')
             }
             placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
-          {loading && <ActivityIndicator size="small" color={theme.textPrimary} />}
-          {searchQuery.length > 0 && !loading && (
+          {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
               <X size={14} color={theme.textMuted} />
             </Pressable>
           )}
         </View>
 
-        {/* Quick Popular Cities for this country */}
-        {searchQuery.length === 0 && popularCities.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Sparkles size={12} color={theme.textMuted} strokeWidth={2.2} />
-              <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>
-                {country?.name} — {t('popular_cities', 'Popüler Turistik Şehirler')}
-              </Text>
-            </View>
-            <View style={styles.chipsWrap}>
-              {popularCities.map((cityName) => {
-                const isSelected = selectedCity.toLowerCase() === cityName.toLowerCase();
-                return (
-                  <Pressable
-                    key={cityName}
-                    onPress={() => handleSelect(cityName)}
-                    style={[
-                      styles.cityChip,
-                      {
-                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
-                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
-                      },
-                    ]}
-                  >
-                    <MapPin
-                      size={12}
-                      color={isSelected ? theme.btnPrimaryText : theme.textMuted}
-                      strokeWidth={2}
-                    />
-                    <Text
-                      style={[
-                        styles.chipText,
-                        {
-                          color: isSelected ? theme.btnPrimaryText : theme.textPrimary,
-                          fontWeight: isSelected ? '700' : '500',
-                        },
-                      ]}
-                    >
-                      {cityName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Live OpenStreetMap Search Results */}
-        {searchQuery.trim().length >= 2 ? (
-          <View style={styles.resultsWrap}>
-            <Text style={[styles.sectionTitle, { color: theme.textMuted, marginBottom: 4 }]}>
-              OpenStreetMap Arama Sonuçları ({country?.code})
+        {/* City and District List */}
+        {loading ? (
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="small" color={theme.textPrimary} />
+            <Text style={[styles.statusText, { color: theme.textMuted }]}>
+              {country?.name} şehir ve ilçeleri yükleniyor...
             </Text>
-            {loading ? (
-              <View style={styles.centerBox}>
-                <ActivityIndicator size="small" color={theme.textPrimary} />
-                <Text style={[styles.statusText, { color: theme.textMuted }]}>
-                  {country?.name} haritası taranıyor...
+          </View>
+        ) : displayedCities.length === 0 ? (
+          <View style={styles.centerBox}>
+            <AlertCircle size={24} color={theme.textMuted} strokeWidth={1.8} />
+            <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+              {searchQuery.trim()
+                ? `"${searchQuery}" ile eşleşen şehir veya ilçe bulunamadı.`
+                : 'Şehir ve ilçe listesi bulunamadı.'}
+            </Text>
+            {searchQuery.trim().length > 0 && (
+              <Pressable
+                onPress={() => handleSelect(searchQuery.trim())}
+                style={[styles.customCityBtn, { backgroundColor: theme.btnPrimaryBg }]}
+              >
+                <Text style={[styles.customCityBtnText, { color: theme.btnPrimaryText }]}>
+                  "{searchQuery.trim()}" Olarak Ekle
                 </Text>
-              </View>
-            ) : osmResults.length === 0 ? (
-              <View style={styles.centerBox}>
-                <AlertCircle size={24} color={theme.textMuted} strokeWidth={1.8} />
-                <Text style={[styles.statusText, { color: theme.textSecondary }]}>
-                  "{searchQuery}" ile eşleşen şehir bulunamadı.
-                </Text>
-                {/* Fallback to allow custom city name */}
-                <Pressable
-                  onPress={() => handleSelect(searchQuery.trim())}
-                  style={[styles.customCityBtn, { backgroundColor: theme.btnPrimaryBg }]}
-                >
-                  <Text style={[styles.customCityBtnText, { color: theme.btnPrimaryText }]}>
-                    "{searchQuery.trim()}" Olarak Ekle
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <FlatList
-                data={osmResults}
-                keyExtractor={(item) => item.id}
-                style={styles.resultsList}
-                contentContainerStyle={styles.resultsListContent}
-                renderItem={({ item }) => {
-                  const isSelected = selectedCity.toLowerCase() === item.name.toLowerCase();
-                  return (
-                    <Pressable
-                      onPress={() => handleSelect(item.name)}
-                      style={({ pressed }) => [
-                        styles.cityRow,
-                        {
-                          backgroundColor: isSelected ? theme.btnSecondaryBg : theme.card,
-                          borderColor: theme.border,
-                        },
-                        pressed && { opacity: 0.75 },
-                      ]}
-                    >
-                      <View style={styles.cityRowLeft}>
-                        <MapPin size={15} color={theme.textPrimary} strokeWidth={2} />
-                        <View style={styles.cityRowText}>
-                          <Text style={[styles.cityName, { color: theme.textPrimary }]}>
-                            {item.name}
-                          </Text>
-                          {item.subtitle ? (
-                            <Text style={[styles.citySubtitle, { color: theme.textMuted }]} numberOfLines={1}>
-                              {item.subtitle}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-                      {isSelected && (
-                        <View style={[styles.checkCircle, { backgroundColor: theme.btnPrimaryBg }]}>
-                          <Check size={12} color={theme.btnPrimaryText} strokeWidth={2.6} />
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                }}
-              />
+              </Pressable>
             )}
           </View>
-        ) : null}
+        ) : (
+          <FlatList
+            data={displayedCities}
+            keyExtractor={(item, index) => `${item}_${index}`}
+            style={styles.resultsList}
+            contentContainerStyle={styles.resultsListContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const isSelected = selectedCity.toLowerCase() === item.toLowerCase();
+              return (
+                <Pressable
+                  onPress={() => handleSelect(item)}
+                  style={({ pressed }) => [
+                    styles.cityRow,
+                    {
+                      backgroundColor: isSelected ? theme.btnSecondaryBg : theme.card,
+                      borderColor: theme.border,
+                    },
+                    pressed && { opacity: 0.75 },
+                  ]}
+                >
+                  <View style={styles.cityRowLeft}>
+                    <MapPin size={15} color={theme.textPrimary} strokeWidth={2} />
+                    <Text style={[styles.cityName, { color: theme.textPrimary }]}>
+                      {item}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <View style={[styles.checkCircle, { backgroundColor: theme.btnPrimaryBg }]}>
+                      <Check size={12} color={theme.btnPrimaryText} strokeWidth={2.6} />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            }}
+          />
+        )}
       </View>
     </ModalSheet>
   );
@@ -253,42 +201,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     padding: 0,
   },
-  section: {
-    gap: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 2,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  cityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 12,
-  },
-  resultsWrap: {
-    flex: 1,
-    gap: 6,
-  },
   resultsList: {
     flex: 1,
   },
@@ -301,7 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 9,
     borderWidth: 1,
   },
@@ -311,16 +223,9 @@ const styles = StyleSheet.create({
     gap: 9,
     flex: 1,
   },
-  cityRowText: {
-    flex: 1,
-    gap: 2,
-  },
   cityName: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  citySubtitle: {
-    fontSize: 11,
   },
   checkCircle: {
     width: 20,
@@ -330,7 +235,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   centerBox: {
-    paddingVertical: 24,
+    paddingVertical: 36,
     alignItems: 'center',
     gap: 8,
   },
@@ -341,7 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    marginTop: 4,
+    marginTop: 6,
   },
   customCityBtnText: {
     fontSize: 12,
