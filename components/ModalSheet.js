@@ -21,6 +21,7 @@ export default function ModalSheet({
   title,
   subtitle,
   children,
+  theme,
 }) {
   const [showModal, setShowModal] = useState(visible);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -143,6 +144,10 @@ export default function ModalSheet({
           <Animated.View
             style={[
               styles.sheetContent,
+              theme && {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
               {
                 maxHeight: contentMaxHeight,
                 transform: [{ translateY: slideAnim }],
@@ -151,14 +156,42 @@ export default function ModalSheet({
           >
             {/* Top Drag Indicator */}
             <View style={styles.handleContainer}>
-              <View style={styles.dragHandle} />
+              <View
+                style={[
+                  styles.dragHandle,
+                  theme && { backgroundColor: theme.border },
+                ]}
+              />
             </View>
 
             {/* Sheet Header */}
-            <View style={styles.header}>
+            <View
+              style={[
+                styles.header,
+                theme && { borderBottomColor: theme.borderMuted },
+              ]}
+            >
               <View style={styles.headerTextCol}>
-                {title ? <Text style={styles.title}>{title}</Text> : null}
-                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                {title ? (
+                  <Text
+                    style={[
+                      styles.title,
+                      theme && { color: theme.textPrimary },
+                    ]}
+                  >
+                    {title}
+                  </Text>
+                ) : null}
+                {subtitle ? (
+                  <Text
+                    style={[
+                      styles.subtitle,
+                      theme && { color: theme.textMuted },
+                    ]}
+                  >
+                    {subtitle}
+                  </Text>
+                ) : null}
               </View>
 
               <Pressable
@@ -166,10 +199,17 @@ export default function ModalSheet({
                 hitSlop={10}
                 style={({ pressed }) => [
                   styles.closeButton,
-                  pressed && { backgroundColor: '#E4E4E7' },
+                  theme && { backgroundColor: theme.btnSecondaryBg },
+                  pressed && {
+                    backgroundColor: theme ? theme.border : '#E4E4E7',
+                  },
                 ]}
               >
-                <X size={16} color="#71717A" strokeWidth={2.4} />
+                <X
+                  size={16}
+                  color={theme ? theme.textMuted : '#71717A'}
+                  strokeWidth={2.4}
+                />
               </Pressable>
             </View>
 

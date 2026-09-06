@@ -3,8 +3,10 @@ import { StyleSheet, View, BackHandler } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import TripListScreen from './screens/TripListScreen';
 import TripDetailScreen from './screens/TripDetailScreen';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 
-export default function App() {
+function AppContent() {
+  const { theme } = useSettings();
   const [selectedTrip, setSelectedTrip] = useState(null);
 
   // Handle hardware back button on Android
@@ -33,8 +35,12 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" backgroundColor="#FFFFFF" translucent={false} />
+    <View style={[styles.container, { backgroundColor: theme.canvas }]}>
+      <StatusBar
+        style={theme.statusBarStyle}
+        backgroundColor={theme.statusBarBg}
+        translucent={false}
+      />
       {selectedTrip ? (
         <TripDetailScreen
           trip={selectedTrip}
@@ -49,9 +55,16 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
   },
 });

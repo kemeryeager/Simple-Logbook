@@ -16,62 +16,96 @@ import {
   Calendar,
   Trash2,
 } from 'lucide-react-native';
+import { useSettings } from '../contexts/SettingsContext';
+import { translatePlaceCategory } from '../utils/translations';
 
-const getCategoryConfig = (category) => {
+const getCategoryConfig = (category, isDark, language) => {
   const cat = (category || '').toLowerCase();
+  const label = translatePlaceCategory(category, language);
 
-  if (cat.includes('doğa') || cat.includes('plaj') || cat.includes('deniz')) {
+  if (
+    cat.includes('doğa') ||
+    cat.includes('plaj') ||
+    cat.includes('deniz') ||
+    cat.includes('nature') ||
+    cat.includes('beach')
+  ) {
     return {
       Icon: Compass,
-      color: '#0D9488',
-      bg: '#CCFBF1',
-      label: category || 'Doğa / Plaj',
+      color: isDark ? '#2DD4BF' : '#0D9488',
+      bg: isDark ? '#134E4A4D' : '#CCFBF1',
+      label,
     };
   }
-  if (cat.includes('tarih') || cat.includes('antik') || cat.includes('kale')) {
+  if (
+    cat.includes('tarih') ||
+    cat.includes('antik') ||
+    cat.includes('kale') ||
+    cat.includes('history') ||
+    cat.includes('historic')
+  ) {
     return {
       Icon: Camera,
-      color: '#D97706',
-      bg: '#FEF3C7',
-      label: category || 'Tarihi Yer',
+      color: isDark ? '#FBBF24' : '#D97706',
+      bg: isDark ? '#78350F4D' : '#FEF3C7',
+      label,
     };
   }
-  if (cat.includes('müze') || cat.includes('kültür') || cat.includes('sanat')) {
+  if (
+    cat.includes('müze') ||
+    cat.includes('kültür') ||
+    cat.includes('sanat') ||
+    cat.includes('museum') ||
+    cat.includes('culture')
+  ) {
     return {
       Icon: Camera,
-      color: '#7C3AED',
-      bg: '#EDE9FE',
-      label: category || 'Müze / Kültür',
+      color: isDark ? '#A78BFA' : '#7C3AED',
+      bg: isDark ? '#4C1D954D' : '#EDE9FE',
+      label,
     };
   }
-  if (cat.includes('kafe') || cat.includes('restoran') || cat.includes('yeme') || cat.includes('kahve')) {
+  if (
+    cat.includes('kafe') ||
+    cat.includes('restoran') ||
+    cat.includes('yeme') ||
+    cat.includes('kahve') ||
+    cat.includes('cafe') ||
+    cat.includes('restaurant')
+  ) {
     return {
-      Icon: cat.includes('kahve') || cat.includes('kafe') ? Coffee : Utensils,
-      color: '#EA580C',
-      bg: '#FFEDD5',
-      label: category || 'Kafe & Restoran',
+      Icon: cat.includes('kahve') || cat.includes('kafe') || cat.includes('cafe') ? Coffee : Utensils,
+      color: isDark ? '#FB923C' : '#EA580C',
+      bg: isDark ? '#7C2D124D' : '#FFEDD5',
+      label,
     };
   }
-  if (cat.includes('alışveriş') || cat.includes('avm') || cat.includes('çarşı')) {
+  if (
+    cat.includes('alışveriş') ||
+    cat.includes('avm') ||
+    cat.includes('çarşı') ||
+    cat.includes('shopping')
+  ) {
     return {
       Icon: ShoppingBag,
-      color: '#0284C7',
-      bg: '#E0F2FE',
-      label: category || 'Alışveriş',
+      color: isDark ? '#38BDF8' : '#0284C7',
+      bg: isDark ? '#0C4A6E4D' : '#E0F2FE',
+      label,
     };
   }
 
   return {
     Icon: MapPin,
-    color: '#475569',
-    bg: '#F1F5F9',
-    label: category || 'Genel Gezi',
+    color: isDark ? '#A1A1AA' : '#475569',
+    bg: isDark ? '#27272A' : '#F1F5F9',
+    label,
   };
 };
 
 export default function PlaceCard({ place, onDelete, onPress }) {
+  const { theme, t, isDark, language } = useSettings();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const config = getCategoryConfig(place.category);
+  const config = getCategoryConfig(place.category, isDark, language);
   const IconComponent = config.Icon;
 
   const handlePressIn = () => {
@@ -93,7 +127,16 @@ export default function PlaceCard({ place, onDelete, onPress }) {
   };
 
   return (
-    <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View
+      style={[
+        styles.cardWrapper,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
       <Pressable
         onPress={() => onPress && onPress(place)}
         onPressIn={handlePressIn}
@@ -111,9 +154,11 @@ export default function PlaceCard({ place, onDelete, onPress }) {
 
           <View style={styles.rightActions}>
             {place.date ? (
-              <View style={styles.dateChip}>
-                <Calendar size={11} color="#64748B" strokeWidth={2} />
-                <Text style={styles.dateChipText}>{place.date}</Text>
+              <View style={[styles.dateChip, { backgroundColor: theme.btnSecondaryBg }]}>
+                <Calendar size={11} color={theme.textMuted} strokeWidth={2} />
+                <Text style={[styles.dateChipText, { color: theme.textMuted }]}>
+                  {place.date}
+                </Text>
               </View>
             ) : null}
 
@@ -121,24 +166,38 @@ export default function PlaceCard({ place, onDelete, onPress }) {
               <Pressable
                 onPress={() => onDelete(place.id)}
                 hitSlop={8}
+                accessibilityLabel={t('delete')}
                 style={({ pressed }) => [
                   styles.deleteBtn,
-                  pressed && { backgroundColor: '#FFE4E6' },
+                  { backgroundColor: theme.btnSecondaryBg },
+                  pressed && { backgroundColor: isDark ? '#450A0A' : '#FFE4E6' },
                 ]}
               >
-                <Trash2 size={15} color="#94A3B8" strokeWidth={2} />
+                <Trash2 size={15} color={isDark ? '#F87171' : '#94A3B8'} strokeWidth={2} />
               </Pressable>
             )}
           </View>
         </View>
 
         {/* Place Name */}
-        <Text style={styles.placeName}>{place.name}</Text>
+        <Text style={[styles.placeName, { color: theme.textPrimary }]}>
+          {place.name}
+        </Text>
 
         {/* Notes (Travel notebook style) */}
         {place.notes ? (
-          <View style={styles.notesBox}>
-            <Text style={styles.notesText}>{place.notes}</Text>
+          <View
+            style={[
+              styles.notesBox,
+              {
+                backgroundColor: theme.cardMuted,
+                borderLeftColor: isDark ? theme.border : theme.btnPrimaryBg,
+              },
+            ]}
+          >
+            <Text style={[styles.notesText, { color: theme.textSecondary }]}>
+              {place.notes}
+            </Text>
           </View>
         ) : null}
       </Pressable>
@@ -148,11 +207,9 @@ export default function PlaceCard({ place, onDelete, onPress }) {
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -190,7 +247,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F4F4F5',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -198,7 +254,6 @@ const styles = StyleSheet.create({
   dateChipText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#71717A',
   },
   deleteBtn: {
     width: 26,
@@ -206,12 +261,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F4F5',
   },
   placeName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#09090B',
     lineHeight: 21,
     marginBottom: 4,
   },
@@ -219,14 +272,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: '#FAFAFA',
     borderRadius: 8,
     borderLeftWidth: 2.5,
-    borderLeftColor: '#18181B',
   },
   notesText: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#52525B',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,20 +21,26 @@ import {
   MapPin,
   Calendar,
   Wallet,
-  Sparkles,
+  Settings,
 } from 'lucide-react-native';
 import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
+import SettingsModal from '../components/SettingsModal';
+import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
 export default function TripListScreen({ onSelectTrip }) {
+  const { theme, t, isDark } = useSettings();
   const [trips, setTrips] = useState([]);
   const [tripStats, setTripStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal State
+  // Settings Modal State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Add Trip Modal State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [city, setCity] = useState('');
@@ -45,7 +51,7 @@ export default function TripListScreen({ onSelectTrip }) {
   const [formError, setFormError] = useState('');
 
   // FAB scale animation
-  const fabScale = React.useRef(new Animated.Value(1)).current;
+  const fabScale = useRef(new Animated.Value(1)).current;
 
   const loadData = useCallback(async () => {
     try {
@@ -55,9 +61,9 @@ export default function TripListScreen({ onSelectTrip }) {
       // Load stats for each trip
       const statsMap = {};
       await Promise.all(
-        tripList.map(async (t) => {
-          const stats = await getTripStats(t.id, t.budget);
-          statsMap[t.id] = stats;
+        tripList.map(async (item) => {
+          const stats = await getTripStats(item.id, item.budget);
+          statsMap[item.id] = stats;
         })
       );
       setTripStats(statsMap);
@@ -96,7 +102,7 @@ export default function TripListScreen({ onSelectTrip }) {
 
   const handleSaveTrip = async () => {
     if (!title.trim()) {
-      setFormError('Lütfen seyahatiniz için bir başlık girin.');
+      setFormError(t('error_title_req'));
       return;
     }
 
@@ -114,25 +120,25 @@ export default function TripListScreen({ onSelectTrip }) {
       setIsAddModalVisible(false);
       await loadData();
     } catch (error) {
-      setFormError('Seyahat kaydedilirken bir sorun oluştu.');
+      setFormError(t('error_trip_save'));
     }
   };
 
   const handleDeleteTrip = (trip) => {
     Alert.alert(
-      'Seyahati Sil',
-      `"${trip.title}" seyahatini ve bu seyahate ait tüm not ve harcamaları silmek istediğinizden emin misiniz?`,
+      t('confirm_delete_trip_title'),
+      t('confirm_delete_trip_msg', { title: trip.title }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteTrip(trip.id);
               await loadData();
             } catch (err) {
-              Alert.alert('Hata', 'Seyahat silinemedi.');
+              Alert.alert(t('error_generic'), t('error_trip_delete'));
             }
           },
         },
@@ -140,11 +146,11 @@ export default function TripListScreen({ onSelectTrip }) {
     );
   };
 
-  const filteredTrips = trips.filter((t) => {
+  const filteredTrips = trips.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const matchTitle = t.title?.toLowerCase().includes(query);
-    const matchCity = t.city?.toLowerCase().includes(query);
+    const matchTitle = item.title?.toLowerCase().includes(query);
+    const matchCity = item.city?.toLowerCase().includes(query);
     return matchTitle || matchCity;
   });
 
@@ -169,39 +175,69 @@ export default function TripListScreen({ onSelectTrip }) {
   const statusBarPadding = Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12;
 
   return (
-    <View style={[styles.container, { paddingTop: statusBarPadding }]}>
+    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: statusBarPadding }]}>
       {/* App Top Bar */}
       <View style={styles.topBar}>
         <View style={styles.brandingCol}>
           <View style={styles.logoRow}>
-            <View style={styles.logoIcon}>
-              <Compass size={18} color="#FFFFFF" strokeWidth={2.4} />
+            <View style={[styles.logoIcon, { backgroundColor: theme.btnPrimaryBg }]}>
+              <Compass size={18} color={theme.btnPrimaryText} strokeWidth={2.4} />
             </View>
-            <Text style={styles.appName}>RotaDefteri</Text>
+            <Text style={[styles.appName, { color: theme.textPrimary }]}>{t('app_name')}</Text>
           </View>
-          <Text style={styles.appTagline}>Gezi & Seyahat Not Defteri</Text>
+          <Text style={[styles.appTagline, { color: theme.textMuted }]}>{t('app_tagline')}</Text>
         </View>
 
-        <Pressable
-          onPress={handleOpenAddModal}
-          style={({ pressed }) => [
-            styles.headerAddBtn,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <Plus size={15} color="#FFFFFF" strokeWidth={2.4} />
-          <Text style={styles.headerAddText}>Yeni Seyahat</Text>
-        </Pressable>
+        <View style={styles.topBarActions}>
+          {/* Settings Button */}
+          <Pressable
+            onPress={() => setIsSettingsOpen(true)}
+            accessibilityLabel={t('settings')}
+            style={({ pressed }) => [
+              styles.headerSettingsBtn,
+              {
+                backgroundColor: theme.btnSecondaryBg,
+                borderColor: theme.border,
+              },
+              pressed && { opacity: 0.75 },
+            ]}
+          >
+            <Settings size={18} color={theme.textPrimary} strokeWidth={2.2} />
+          </Pressable>
+
+          {/* New Trip Button */}
+          <Pressable
+            onPress={handleOpenAddModal}
+            style={({ pressed }) => [
+              styles.headerAddBtn,
+              { backgroundColor: theme.btnPrimaryBg },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Plus size={15} color={theme.btnPrimaryText} strokeWidth={2.4} />
+            <Text style={[styles.headerAddText, { color: theme.btnPrimaryText }]}>
+              {t('new_trip')}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Search Input Bar */}
       <View style={styles.searchSection}>
-        <View style={styles.searchBarContainer}>
-          <Search size={16} color="#A1A1AA" strokeWidth={2} style={styles.searchIcon} />
+        <View
+          style={[
+            styles.searchBarContainer,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <Search size={16} color={theme.textMuted} strokeWidth={2} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
-            placeholder="Seyahat veya şehir ara..."
-            placeholderTextColor="#A1A1AA"
+            style={[styles.searchInput, { color: theme.textPrimary }]}
+            placeholder={t('search_placeholder')}
+            placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
@@ -209,7 +245,7 @@ export default function TripListScreen({ onSelectTrip }) {
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')} hitSlop={8} style={styles.clearSearchBtn}>
-              <X size={14} color="#71717A" />
+              <X size={14} color={theme.textMuted} />
             </Pressable>
           )}
         </View>
@@ -235,38 +271,52 @@ export default function TripListScreen({ onSelectTrip }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#18181B"
-            colors={['#18181B']}
+            tintColor={theme.textPrimary}
+            colors={[theme.textPrimary]}
           />
         }
         ListHeaderComponent={
           filteredTrips.length > 0 ? (
             <View style={styles.listHeader}>
-              <Text style={styles.listHeaderTitle}>Planlanan Rotalar</Text>
-              <Text style={styles.listHeaderBadge}>{filteredTrips.length} rota</Text>
+              <Text style={[styles.listHeaderTitle, { color: theme.textMuted }]}>
+                {t('planned_routes')}
+              </Text>
+              <Text
+                style={[
+                  styles.listHeaderBadge,
+                  {
+                    color: theme.textSecondary,
+                    backgroundColor: theme.btnSecondaryBg,
+                  },
+                ]}
+              >
+                {t('routes_count', { count: filteredTrips.length })}
+              </Text>
             </View>
           ) : null
         }
         ListEmptyComponent={
           !loading && (
             <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Compass size={32} color="#71717A" strokeWidth={1.8} />
+              <View style={[styles.emptyIconCircle, { backgroundColor: theme.btnSecondaryBg }]}>
+                <Compass size={32} color={theme.textMuted} strokeWidth={1.8} />
               </View>
-              <Text style={styles.emptyTitle}>
-                {searchQuery ? 'Aramanıza Uygun Rota Bulunamadı' : 'Henüz Bir Seyahat Eklenmedi'}
+              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+                {searchQuery ? t('search_empty_title') : t('no_trips_title')}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
                 {searchQuery
-                  ? `"${searchQuery}" ile eşleşen bir seyahat kaydı bulunamadı.`
-                  : 'Yeni bir seyahat rotası oluşturun, bütçenizi ve ziyaret yerlerinizi kolayca takip edin.'}
+                  ? t('search_empty_subtitle')
+                  : t('no_trips_subtitle')}
               </Text>
               <Pressable
                 onPress={handleOpenAddModal}
-                style={styles.emptyActionButton}
+                style={[styles.emptyActionButton, { backgroundColor: theme.btnPrimaryBg }]}
               >
-                <Plus size={16} color="#FFFFFF" strokeWidth={2.4} />
-                <Text style={styles.emptyActionText}>Yeni Seyahat Planla</Text>
+                <Plus size={16} color={theme.btnPrimaryText} strokeWidth={2.4} />
+                <Text style={[styles.emptyActionText, { color: theme.btnPrimaryText }]}>
+                  {t('plan_new_trip')}
+                </Text>
               </Pressable>
             </View>
           )
@@ -280,37 +330,63 @@ export default function TripListScreen({ onSelectTrip }) {
             onPress={handleOpenAddModal}
             onPressIn={handleFabPressIn}
             onPressOut={handleFabPressOut}
-            style={styles.fabButton}
+            style={[styles.fabButton, { backgroundColor: theme.btnPrimaryBg }]}
           >
-            <Plus size={18} color="#FFFFFF" strokeWidth={2.4} />
-            <Text style={styles.fabText}>Seyahat Ekle</Text>
+            <Plus size={18} color={theme.btnPrimaryText} strokeWidth={2.4} />
+            <Text style={[styles.fabText, { color: theme.btnPrimaryText }]}>
+              {t('new_trip')}
+            </Text>
           </Pressable>
         </Animated.View>
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        visible={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
 
       {/* Add Trip Modal Sheet */}
       <ModalSheet
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
-        title="Yeni Seyahat Planla"
-        subtitle="Rotanızı belirleyin ve bütçenizi kontrol altında tutun"
+        title={t('modal_new_trip_title')}
+        subtitle={t('modal_new_trip_subtitle')}
+        theme={theme}
       >
         <View style={styles.formContainer}>
           {formError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{formError}</Text>
+            <View
+              style={[
+                styles.errorBox,
+                {
+                  backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                  borderLeftColor: '#DC2626',
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                {formError}
+              </Text>
             </View>
           ) : null}
 
           {/* Title Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Seyahat Başlığı <Text style={styles.requiredStar}>*</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('trip_title')} <Text style={styles.requiredStar}>*</Text>
             </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: Ege & Akdeniz Kaçamağı"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_trip_title')}
+              placeholderTextColor={theme.textMuted}
               value={title}
               onChangeText={(text) => {
                 setTitle(text);
@@ -322,13 +398,22 @@ export default function TripListScreen({ onSelectTrip }) {
           {/* City / Destination */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <MapPin size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Şehir veya Rota</Text>
+              <MapPin size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('destination_city')}
+              </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: Antalya, Kaş - Kalkan"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_city')}
+              placeholderTextColor={theme.textMuted}
               value={city}
               onChangeText={setCity}
             />
@@ -338,13 +423,22 @@ export default function TripListScreen({ onSelectTrip }) {
           <View style={styles.rowTwoCols}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
               <View style={styles.labelRow}>
-                <Calendar size={13} color="#71717A" strokeWidth={2} />
-                <Text style={styles.inputLabel}>Başlangıç</Text>
+                <Calendar size={13} color={theme.textMuted} strokeWidth={2} />
+                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                  {t('start_date')}
+                </Text>
               </View>
               <TextInput
-                style={styles.textInput}
-                placeholder="YYYY-AA-GG"
-                placeholderTextColor="#A1A1AA"
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: theme.inputBg,
+                    borderColor: theme.border,
+                    color: theme.textPrimary,
+                  },
+                ]}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.textMuted}
                 value={startDate}
                 onChangeText={setStartDate}
               />
@@ -352,13 +446,22 @@ export default function TripListScreen({ onSelectTrip }) {
 
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 6 }]}>
               <View style={styles.labelRow}>
-                <Calendar size={13} color="#71717A" strokeWidth={2} />
-                <Text style={styles.inputLabel}>Bitiş</Text>
+                <Calendar size={13} color={theme.textMuted} strokeWidth={2} />
+                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                  {t('end_date')}
+                </Text>
               </View>
               <TextInput
-                style={styles.textInput}
-                placeholder="YYYY-AA-GG"
-                placeholderTextColor="#A1A1AA"
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: theme.inputBg,
+                    borderColor: theme.border,
+                    color: theme.textPrimary,
+                  },
+                ]}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.textMuted}
                 value={endDate}
                 onChangeText={setEndDate}
               />
@@ -368,22 +471,33 @@ export default function TripListScreen({ onSelectTrip }) {
           {/* Budget Input */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Wallet size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Hedef Bütçe</Text>
+              <Wallet size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('target_budget')}
+              </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: 30000"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_budget')}
+              placeholderTextColor={theme.textMuted}
               keyboardType="numeric"
               value={budget}
               onChangeText={setBudget}
             />
           </View>
 
-          {/* Currency Selector Chips (Top 8 Currencies + TRY) */}
+          {/* Currency Selector Chips */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Para Birimi</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('currency')}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -397,13 +511,18 @@ export default function TripListScreen({ onSelectTrip }) {
                     onPress={() => setCurrency(item.symbol)}
                     style={[
                       styles.currencyChip,
-                      isSelected && styles.currencyChipSelected,
+                      {
+                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
+                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.currencyChipText,
-                        isSelected && styles.currencyChipTextSelected,
+                        {
+                          color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                        },
                       ]}
                     >
                       {item.label}
@@ -418,16 +537,20 @@ export default function TripListScreen({ onSelectTrip }) {
           <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsAddModalVisible(false)}
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { backgroundColor: theme.btnSecondaryBg }]}
             >
-              <Text style={styles.cancelButtonText}>Vazgeç</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.btnSecondaryText }]}>
+                {t('cancel')}
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={handleSaveTrip}
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: theme.btnPrimaryBg }]}
             >
-              <Text style={styles.saveButtonText}>Seyahati Kaydet</Text>
+              <Text style={[styles.saveButtonText, { color: theme.btnPrimaryText }]}>
+                {t('save')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -439,7 +562,6 @@ export default function TripListScreen({ onSelectTrip }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
   },
   topBar: {
     flexDirection: 'row',
@@ -461,27 +583,36 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: '#18181B',
     alignItems: 'center',
     justifyContent: 'center',
   },
   appName: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#09090B',
     letterSpacing: -0.4,
   },
   appTagline: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#71717A',
     marginTop: 1,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerSettingsBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#18181B',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
@@ -489,7 +620,6 @@ const styles = StyleSheet.create({
   headerAddText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   searchSection: {
     paddingHorizontal: 16,
@@ -498,9 +628,7 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
@@ -511,7 +639,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: '#09090B',
     paddingVertical: 0,
   },
   clearSearchBtn: {
@@ -528,15 +655,12 @@ const styles = StyleSheet.create({
   listHeaderTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#71717A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   listHeaderBadge: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#52525B',
-    backgroundColor: '#F4F4F5',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -558,7 +682,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -566,14 +689,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#09090B',
     textAlign: 'center',
     marginBottom: 6,
   },
   emptySubtitle: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#71717A',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -581,7 +702,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#18181B',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
@@ -589,7 +709,6 @@ const styles = StyleSheet.create({
   emptyActionText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   fabContainer: {
     position: 'absolute',
@@ -605,13 +724,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#18181B',
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
   },
   fabText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -621,14 +738,11 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   errorBox: {
-    backgroundColor: '#FEE2E2',
     borderLeftWidth: 3,
-    borderLeftColor: '#DC2626',
     padding: 8,
     borderRadius: 6,
   },
   errorText: {
-    color: '#991B1B',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -643,20 +757,16 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#3F3F46',
   },
   requiredStar: {
     color: '#DC2626',
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#09090B',
   },
   rowTwoCols: {
     flexDirection: 'row',
@@ -671,21 +781,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#F4F4F5',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
-  },
-  currencyChipSelected: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B',
   },
   currencyChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#52525B',
-  },
-  currencyChipTextSelected: {
-    color: '#FFFFFF',
   },
   modalButtonsRow: {
     flexDirection: 'row',
@@ -698,23 +798,19 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#F4F4F5',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#52525B',
   },
   saveButton: {
     flex: 2,
     paddingVertical: 11,
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#18181B',
   },
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

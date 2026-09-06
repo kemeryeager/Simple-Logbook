@@ -1,13 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { Wallet, AlertCircle, CheckCircle2, Pencil } from 'lucide-react-native';
+import { useSettings } from '../contexts/SettingsContext';
+import { formatCurrency as formatCurrencyWithLocale } from '../utils/translations';
 
-export const formatCurrency = (amount, currency = '₺') => {
-  const num = Number(amount) || 0;
-  // Format with thousand separator
-  const formatted = num.toLocaleString('tr-TR');
-  // Position currency symbol cleanly
-  return `${formatted} ${currency}`;
+// Export formatCurrency for backward compatibility
+export const formatCurrency = (amount, currency = '₺', lang = 'tr') => {
+  return formatCurrencyWithLocale(amount, currency, lang);
 };
 
 export default function BudgetProgress({
@@ -18,6 +17,7 @@ export default function BudgetProgress({
   onEditBudget,
   style,
 }) {
+  const { theme, t, isDark, language } = useSettings();
   const safeBudget = Number(budget) || 0;
   const safeSpent = Number(totalSpent) || 0;
   const remaining = safeBudget - safeSpent;
@@ -37,23 +37,51 @@ export default function BudgetProgress({
   const isOver = safeBudget > 0 && safeSpent > safeBudget;
   const isWarning = safeBudget > 0 && percent >= 80 && !isOver;
 
-  // Modern, refined color scheme
-  const barColor = isOver ? '#E11D48' : isWarning ? '#D97706' : '#18181B';
-  const badgeBg = isOver ? '#FFE4E6' : isWarning ? '#FEF3C7' : '#F4F4F5';
-  const badgeTextColor = isOver ? '#9F1239' : isWarning ? '#92400E' : '#27272A';
+  // Themed colors
+  const barColor = isOver
+    ? '#E11D48'
+    : isWarning
+    ? '#D97706'
+    : theme.btnPrimaryBg;
+
+  const badgeBg = isOver
+    ? isDark
+      ? '#4C0519'
+      : '#FFE4E6'
+    : isWarning
+    ? isDark
+      ? '#451A03'
+      : '#FEF3C7'
+    : theme.btnSecondaryBg;
+
+  const badgeTextColor = isOver
+    ? isDark
+      ? '#FECDD3'
+      : '#9F1239'
+    : isWarning
+    ? isDark
+      ? '#FDE68A'
+      : '#92400E'
+    : theme.textSecondary;
 
   const widthInterpolate = animatedWidth.interpolate({
     inputRange: [0, 100],
     outputRange: ['0%', '100%'],
   });
 
+  const formattedSpent = formatCurrency(safeSpent, currency, language);
+  const formattedBudget = formatCurrency(safeBudget, currency, language);
+
   if (compact) {
     return (
       <View style={[styles.compactContainer, style]}>
         <View style={styles.compactHeader}>
-          <Text style={styles.compactSpentText}>
-            {formatCurrency(safeSpent, currency)}
-            <Text style={styles.compactBudgetText}> / {formatCurrency(safeBudget, currency)}</Text>
+          <Text style={[styles.compactSpentText, { color: theme.textPrimary }]}>
+            {formattedSpent}
+            <Text style={[styles.compactBudgetText, { color: theme.textMuted }]}>
+              {' '}
+              / {formattedBudget}
+            </Text>
           </Text>
           <View style={[styles.badgePill, { backgroundColor: badgeBg }]}>
             <Text style={[styles.badgeText, { color: badgeTextColor }]}>
@@ -62,7 +90,12 @@ export default function BudgetProgress({
           </View>
         </View>
 
-        <View style={styles.compactTrack}>
+        <View
+          style={[
+            styles.compactTrack,
+            { backgroundColor: isDark ? '#27272A' : '#F4F4F5' },
+          ]}
+        >
           <Animated.View
             style={[
               styles.compactBar,
@@ -78,13 +111,24 @@ export default function BudgetProgress({
   }
 
   return (
-    <View style={[styles.fullCard, style]}>
+    <View
+      style={[
+        styles.fullCard,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+        },
+        style,
+      ]}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
-          <View style={styles.iconCircle}>
-            <Wallet size={16} color="#18181B" strokeWidth={2} />
+          <View style={[styles.iconCircle, { backgroundColor: theme.btnSecondaryBg }]}>
+            <Wallet size={16} color={theme.textPrimary} strokeWidth={2} />
           </View>
-          <Text style={styles.cardTitle}>Bütçe Durumu</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('budget_status')}
+          </Text>
         </View>
 
         <View style={styles.headerRightActions}>
@@ -95,7 +139,9 @@ export default function BudgetProgress({
               <CheckCircle2 size={12} color={badgeTextColor} style={{ marginRight: 4 }} />
             )}
             <Text style={[styles.badgeText, { color: badgeTextColor }]}>
-              {isOver ? `Bütçe Aşıldı (%${percent})` : `%${percent} Harcandı`}
+              {isOver
+                ? t('budget_exceeded_badge', { percent })
+                : t('budget_spent_badge', { percent })}
             </Text>
           </View>
 
@@ -104,19 +150,27 @@ export default function BudgetProgress({
               onPress={onEditBudget}
               style={({ pressed }) => [
                 styles.editBudgetBtn,
-                pressed && { backgroundColor: '#E4E4E7' },
+                { backgroundColor: theme.btnSecondaryBg },
+                pressed && { opacity: 0.75 },
               ]}
               hitSlop={8}
             >
-              <Pencil size={13} color="#52525B" strokeWidth={2.2} />
-              <Text style={styles.editBudgetBtnText}>Düzenle</Text>
+              <Pencil size={13} color={theme.textSecondary} strokeWidth={2.2} />
+              <Text style={[styles.editBudgetBtnText, { color: theme.textSecondary }]}>
+                {t('edit')}
+              </Text>
             </Pressable>
           )}
         </View>
       </View>
 
       {/* Progress Track */}
-      <View style={styles.progressTrack}>
+      <View
+        style={[
+          styles.progressTrack,
+          { backgroundColor: isDark ? '#27272A' : '#F4F4F5' },
+        ]}
+      >
         <Animated.View
           style={[
             styles.progressBar,
@@ -129,32 +183,59 @@ export default function BudgetProgress({
       </View>
 
       {/* Stats Breakdown Grid */}
-      <View style={styles.statsGrid}>
+      <View
+        style={[
+          styles.statsGrid,
+          {
+            backgroundColor: theme.cardMuted,
+            borderColor: theme.borderMuted,
+          },
+        ]}
+      >
         <View style={styles.statColumn}>
-          <Text style={styles.statLabel}>Hedef Bütçe</Text>
-          <Text style={styles.statValueBold}>{formatCurrency(safeBudget, currency)}</Text>
-        </View>
-
-        <View style={styles.statDivider} />
-
-        <View style={styles.statColumn}>
-          <Text style={styles.statLabel}>Harcanan</Text>
-          <Text style={[styles.statValueBold, { color: isOver ? '#E11D48' : '#09090B' }]}>
-            {formatCurrency(safeSpent, currency)}
+          <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+            {t('target_budget')}
+          </Text>
+          <Text style={[styles.statValueBold, { color: theme.textPrimary }]}>
+            {formattedBudget}
           </Text>
         </View>
 
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
 
         <View style={styles.statColumn}>
-          <Text style={styles.statLabel}>{isOver ? 'Aşım' : 'Kalan'}</Text>
+          <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+            {t('spent')}
+          </Text>
           <Text
             style={[
               styles.statValueBold,
-              { color: isOver ? '#E11D48' : '#15803D' },
+              { color: isOver ? '#E11D48' : theme.textPrimary },
             ]}
           >
-            {formatCurrency(Math.abs(remaining), currency)}
+            {formattedSpent}
+          </Text>
+        </View>
+
+        <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+
+        <View style={styles.statColumn}>
+          <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+            {isOver ? t('over_budget') : t('remaining')}
+          </Text>
+          <Text
+            style={[
+              styles.statValueBold,
+              {
+                color: isOver
+                  ? '#E11D48'
+                  : isDark
+                  ? '#4ADE80'
+                  : '#15803D',
+              },
+            ]}
+          >
+            {formatCurrency(Math.abs(remaining), currency, language)}
           </Text>
         </View>
       </View>
@@ -176,16 +257,13 @@ const styles = StyleSheet.create({
   compactSpentText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#09090B',
   },
   compactBudgetText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#71717A',
   },
   compactTrack: {
     height: 5,
-    backgroundColor: '#F4F4F5',
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -196,11 +274,9 @@ const styles = StyleSheet.create({
 
   // Full Card Styles
   fullCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -222,14 +298,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#09090B',
     letterSpacing: -0.2,
   },
   headerRightActions: {
@@ -241,7 +315,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F4F4F5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -249,7 +322,6 @@ const styles = StyleSheet.create({
   editBudgetBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#52525B',
   },
   badgePill: {
     flexDirection: 'row',
@@ -264,7 +336,6 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 8,
-    backgroundColor: '#F4F4F5',
     borderRadius: 999,
     overflow: 'hidden',
     marginBottom: 14,
@@ -277,10 +348,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FAFAFA',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F4F4F5',
     paddingVertical: 10,
     paddingHorizontal: 8,
   },
@@ -291,17 +360,14 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 24,
-    backgroundColor: '#E4E4E7',
   },
   statLabel: {
     fontSize: 11,
-    color: '#71717A',
     fontWeight: '500',
     marginBottom: 2,
   },
   statValueBold: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#09090B',
   },
 });

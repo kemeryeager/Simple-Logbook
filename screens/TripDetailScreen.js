@@ -22,14 +22,18 @@ import {
   Plus,
   Compass,
   CreditCard,
-  X,
   FileText,
 } from 'lucide-react-native';
 import BudgetProgress from '../components/BudgetProgress';
 import PlaceCard from '../components/PlaceCard';
 import ExpenseCard from '../components/ExpenseCard';
 import ModalSheet from '../components/ModalSheet';
-import { formatDateRange } from '../components/TripCard';
+import { useSettings } from '../contexts/SettingsContext';
+import {
+  formatDateRange,
+  translatePlaceCategory,
+  translateExpenseCategory,
+} from '../utils/translations';
 import {
   getPlaces,
   savePlace,
@@ -44,21 +48,21 @@ import {
 } from '../utils/storage';
 
 const PLACE_CATEGORIES = [
-  'Doğa / Plaj',
-  'Tarihi Yer',
-  'Müze / Kültür',
-  'Kafe & Restoran',
-  'Alışveriş',
-  'Diğer',
+  'place_cat_nature',
+  'place_cat_history',
+  'place_cat_museum',
+  'place_cat_cafe',
+  'place_cat_shopping',
+  'place_cat_other',
 ];
 
 const EXPENSE_CATEGORIES = [
-  'Konaklama',
-  'Ulaşım',
-  'Yeme / İçme',
-  'Aktivite',
-  'Alışveriş',
-  'Diğer',
+  'expense_cat_stay',
+  'expense_cat_transit',
+  'expense_cat_food',
+  'expense_cat_activity',
+  'expense_cat_shopping',
+  'expense_cat_other',
 ];
 
 export default function TripDetailScreen({
@@ -67,6 +71,7 @@ export default function TripDetailScreen({
   onTripDeleted,
   onTripUpdated,
 }) {
+  const { theme, t, isDark, language } = useSettings();
   const [currentTrip, setCurrentTrip] = useState(trip);
   const [activeTab, setActiveTab] = useState('places'); // 'places' | 'expenses'
   const [places, setPlaces] = useState([]);
@@ -75,9 +80,9 @@ export default function TripDetailScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filters
-  const [selectedPlaceCategory, setSelectedPlaceCategory] = useState('Tümü');
-  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('Tümü');
+  // Filters ('all' or category key)
+  const [selectedPlaceCategory, setSelectedPlaceCategory] = useState('all');
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('all');
 
   // Edit Budget Modal State
   const [isEditBudgetModalVisible, setIsEditBudgetModalVisible] = useState(false);
@@ -150,7 +155,7 @@ export default function TripDetailScreen({
   const handleSaveBudget = async () => {
     const rawBudget = parseFloat(editBudgetAmount);
     if (isNaN(rawBudget) || rawBudget < 0) {
-      setEditBudgetError('Lütfen geçerli ve 0 veya üzeri bir bütçe girin.');
+      setEditBudgetError(t('error_budget_invalid'));
       return;
     }
 
@@ -166,7 +171,7 @@ export default function TripDetailScreen({
       }
       await loadTripData(updated);
     } catch (err) {
-      setEditBudgetError('Bütçe güncellenirken bir hata oluştu.');
+      setEditBudgetError(t('error_budget_update'));
     }
   };
 
@@ -182,7 +187,7 @@ export default function TripDetailScreen({
 
   const handleSavePlace = async () => {
     if (!placeName.trim()) {
-      setPlaceError('Lütfen yer veya mekan adı girin.');
+      setPlaceError(t('error_place_name_req'));
       return;
     }
 
@@ -197,25 +202,25 @@ export default function TripDetailScreen({
       setIsPlaceModalVisible(false);
       await loadTripData();
     } catch (err) {
-      setPlaceError('Ziyaret yeri kaydedilemedi.');
+      setPlaceError(t('error_place_save'));
     }
   };
 
   const handleDeletePlace = (placeId) => {
     Alert.alert(
-      'Yeri Sil',
-      'Bu gezi noktasını silmek istediğinizden emin misiniz?',
+      t('confirm_delete_place_title'),
+      t('confirm_delete_place_msg'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deletePlace(placeId);
               await loadTripData();
             } catch (err) {
-              Alert.alert('Hata', 'Yer silinemedi.');
+              Alert.alert(t('error_generic'), t('error_place_delete'));
             }
           },
         },
@@ -235,12 +240,12 @@ export default function TripDetailScreen({
 
   const handleSaveExpense = async () => {
     if (!expenseTitle.trim()) {
-      setExpenseError('Lütfen harcama başlığı girin.');
+      setExpenseError(t('error_title_req'));
       return;
     }
     const rawAmt = parseFloat(expenseAmount);
     if (isNaN(rawAmt) || rawAmt <= 0) {
-      setExpenseError("Harcama tutarı 0'dan büyük geçerli bir sayı olmalıdır.");
+      setExpenseError(t('error_amount_req'));
       return;
     }
 
@@ -255,25 +260,25 @@ export default function TripDetailScreen({
       setIsExpenseModalVisible(false);
       await loadTripData();
     } catch (err) {
-      setExpenseError('Harcama kaydedilemedi.');
+      setExpenseError(t('error_expense_save'));
     }
   };
 
   const handleDeleteExpense = (expenseId) => {
     Alert.alert(
-      'Harcamayı Sil',
-      'Bu harcama kaydını silmek istediğinizden emin misiniz?',
+      t('confirm_delete_expense_title'),
+      t('confirm_delete_expense_msg'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteExpense(expenseId);
               await loadTripData();
             } catch (err) {
-              Alert.alert('Hata', 'Harcama silinemedi.');
+              Alert.alert(t('error_generic'), t('error_expense_delete'));
             }
           },
         },
@@ -283,19 +288,19 @@ export default function TripDetailScreen({
 
   const handleDeleteCurrentTrip = () => {
     Alert.alert(
-      'Seyahati Sil',
-      `"${currentTrip.title}" seyahatini ve bağlı tüm verileri silmek istediğinizden emin misiniz?`,
+      t('confirm_delete_trip_title'),
+      t('confirm_delete_trip_msg', { title: currentTrip.title }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteTrip(currentTrip.id);
               if (onTripDeleted) onTripDeleted(currentTrip.id);
             } catch (err) {
-              Alert.alert('Hata', 'Seyahat silinemedi.');
+              Alert.alert(t('error_generic'), t('error_trip_delete'));
             }
           },
         },
@@ -303,15 +308,21 @@ export default function TripDetailScreen({
     );
   };
 
-  // Filtered Lists
+  // Filtered Lists supporting both category keys and legacy Turkish strings
   const filteredPlaces = places.filter((p) => {
-    if (selectedPlaceCategory === 'Tümü') return true;
-    return (p.category || '').toLowerCase() === selectedPlaceCategory.toLowerCase();
+    if (selectedPlaceCategory === 'all') return true;
+    return (
+      p.category === selectedPlaceCategory ||
+      translatePlaceCategory(p.category, 'en') === translatePlaceCategory(selectedPlaceCategory, 'en')
+    );
   });
 
   const filteredExpenses = expenses.filter((e) => {
-    if (selectedExpenseCategory === 'Tümü') return true;
-    return (e.category || '').toLowerCase() === selectedExpenseCategory.toLowerCase();
+    if (selectedExpenseCategory === 'all') return true;
+    return (
+      e.category === selectedExpenseCategory ||
+      translateExpenseCategory(e.category, 'en') === translateExpenseCategory(selectedExpenseCategory, 'en')
+    );
   });
 
   const handleFabPressIn = () => {
@@ -332,32 +343,42 @@ export default function TripDetailScreen({
     }).start();
   };
 
-  const dateSpan = formatDateRange(currentTrip.startDate, currentTrip.endDate);
+  const dateSpan = formatDateRange(currentTrip.startDate, currentTrip.endDate, language);
   const statusBarPadding = Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12;
 
   return (
-    <View style={[styles.container, { paddingTop: statusBarPadding }]}>
+    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: statusBarPadding }]}>
       {/* Top Navigation Bar */}
-      <View style={styles.navBar}>
+      <View
+        style={[
+          styles.navBar,
+          {
+            backgroundColor: theme.card,
+            borderBottomColor: theme.border,
+          },
+        ]}
+      >
         <Pressable
           onPress={onBack}
           hitSlop={8}
+          accessibilityLabel={t('back')}
           style={({ pressed }) => [
             styles.backButton,
-            pressed && { backgroundColor: '#E4E4E7' },
+            { backgroundColor: theme.btnSecondaryBg },
+            pressed && { opacity: 0.8 },
           ]}
         >
-          <ArrowLeft size={18} color="#09090B" strokeWidth={2.4} />
+          <ArrowLeft size={18} color={theme.textPrimary} strokeWidth={2.4} />
         </Pressable>
 
         <View style={styles.navTitleWrap}>
-          <Text style={styles.navTitle} numberOfLines={1}>
+          <Text style={[styles.navTitle, { color: theme.textPrimary }]} numberOfLines={1}>
             {currentTrip.title}
           </Text>
           {currentTrip.city ? (
             <View style={styles.navCityRow}>
-              <MapPin size={11} color="#71717A" strokeWidth={2} />
-              <Text style={styles.navCityText} numberOfLines={1}>
+              <MapPin size={11} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.navCityText, { color: theme.textMuted }]} numberOfLines={1}>
                 {currentTrip.city}
               </Text>
             </View>
@@ -367,12 +388,14 @@ export default function TripDetailScreen({
         <Pressable
           onPress={handleDeleteCurrentTrip}
           hitSlop={8}
+          accessibilityLabel={t('delete')}
           style={({ pressed }) => [
             styles.deleteTripBtn,
-            pressed && { backgroundColor: '#FEE2E2' },
+            { backgroundColor: theme.btnSecondaryBg },
+            pressed && { backgroundColor: isDark ? '#450A0A' : '#FEE2E2' },
           ]}
         >
-          <Trash2 size={16} color="#A1A1AA" strokeWidth={2} />
+          <Trash2 size={16} color={isDark ? '#F87171' : '#A1A1AA'} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -383,8 +406,8 @@ export default function TripDetailScreen({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#18181B"
-            colors={['#18181B']}
+            tintColor={theme.textPrimary}
+            colors={[theme.textPrimary]}
           />
         }
         contentContainerStyle={styles.scrollContainer}
@@ -392,9 +415,19 @@ export default function TripDetailScreen({
           <View>
             {/* Dates banner if available */}
             {dateSpan ? (
-              <View style={styles.dateBanner}>
-                <Calendar size={13} color="#71717A" strokeWidth={2} />
-                <Text style={styles.dateBannerText}>{dateSpan}</Text>
+              <View
+                style={[
+                  styles.dateBanner,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Calendar size={13} color={theme.textMuted} strokeWidth={2} />
+                <Text style={[styles.dateBannerText, { color: theme.textSecondary }]}>
+                  {dateSpan}
+                </Text>
               </View>
             ) : null}
 
@@ -409,37 +442,55 @@ export default function TripDetailScreen({
             </View>
 
             {/* Segmented Tab Switcher */}
-            <View style={styles.tabSwitcher}>
+            <View
+              style={[
+                styles.tabSwitcher,
+                {
+                  backgroundColor: theme.btnSecondaryBg,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
               <Pressable
                 onPress={() => setActiveTab('places')}
                 style={[
                   styles.tabButton,
-                  activeTab === 'places' && styles.tabButtonActive,
+                  activeTab === 'places' && [
+                    styles.tabButtonActive,
+                    { backgroundColor: theme.btnPrimaryBg },
+                  ],
                 ]}
               >
                 <Compass
                   size={15}
-                  color={activeTab === 'places' ? '#FFFFFF' : '#71717A'}
+                  color={activeTab === 'places' ? theme.btnPrimaryText : theme.textMuted}
                   strokeWidth={2.2}
                 />
                 <Text
                   style={[
                     styles.tabButtonText,
-                    activeTab === 'places' && styles.tabButtonTextActive,
+                    {
+                      color: activeTab === 'places' ? theme.btnPrimaryText : theme.textMuted,
+                      fontWeight: activeTab === 'places' ? '700' : '600',
+                    },
                   ]}
                 >
-                  Gezilecek Yerler
+                  {t('places_tab')}
                 </Text>
                 <View
                   style={[
                     styles.tabBadge,
-                    activeTab === 'places' && styles.tabBadgeActive,
+                    {
+                      backgroundColor: activeTab === 'places' ? (isDark ? '#27272A' : '#3F3F46') : theme.border,
+                    },
                   ]}
                 >
                   <Text
                     style={[
                       styles.tabBadgeText,
-                      activeTab === 'places' && styles.tabBadgeTextActive,
+                      {
+                        color: activeTab === 'places' ? '#FFFFFF' : theme.textMuted,
+                      },
                     ]}
                   >
                     {places.length}
@@ -451,32 +502,42 @@ export default function TripDetailScreen({
                 onPress={() => setActiveTab('expenses')}
                 style={[
                   styles.tabButton,
-                  activeTab === 'expenses' && styles.tabButtonActive,
+                  activeTab === 'expenses' && [
+                    styles.tabButtonActive,
+                    { backgroundColor: theme.btnPrimaryBg },
+                  ],
                 ]}
               >
                 <Wallet
                   size={15}
-                  color={activeTab === 'expenses' ? '#FFFFFF' : '#71717A'}
+                  color={activeTab === 'expenses' ? theme.btnPrimaryText : theme.textMuted}
                   strokeWidth={2.2}
                 />
                 <Text
                   style={[
                     styles.tabButtonText,
-                    activeTab === 'expenses' && styles.tabButtonTextActive,
+                    {
+                      color: activeTab === 'expenses' ? theme.btnPrimaryText : theme.textMuted,
+                      fontWeight: activeTab === 'expenses' ? '700' : '600',
+                    },
                   ]}
                 >
-                  Harcamalar
+                  {t('expenses_tab')}
                 </Text>
                 <View
                   style={[
                     styles.tabBadge,
-                    activeTab === 'expenses' && styles.tabBadgeActive,
+                    {
+                      backgroundColor: activeTab === 'expenses' ? (isDark ? '#27272A' : '#3F3F46') : theme.border,
+                    },
                   ]}
                 >
                   <Text
                     style={[
                       styles.tabBadgeText,
-                      activeTab === 'expenses' && styles.tabBadgeTextActive,
+                      {
+                        color: activeTab === 'expenses' ? '#FFFFFF' : theme.textMuted,
+                      },
                     ]}
                   >
                     {expenses.length}
@@ -491,51 +552,119 @@ export default function TripDetailScreen({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryFiltersContainer}
             >
-              {activeTab === 'places'
-                ? ['Tümü', ...PLACE_CATEGORIES].map((cat) => {
-                    const isSelected = selectedPlaceCategory === cat;
+              {activeTab === 'places' ? (
+                <>
+                  {/* All Category Pill */}
+                  <Pressable
+                    onPress={() => setSelectedPlaceCategory('all')}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: selectedPlaceCategory === 'all' ? theme.btnPrimaryBg : theme.card,
+                        borderColor: selectedPlaceCategory === 'all' ? theme.btnPrimaryBg : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: selectedPlaceCategory === 'all' ? theme.btnPrimaryText : theme.textSecondary,
+                          fontWeight: selectedPlaceCategory === 'all' ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {t('place_cat_all')}
+                    </Text>
+                  </Pressable>
+
+                  {/* Individual Place Categories */}
+                  {PLACE_CATEGORIES.map((catKey) => {
+                    const isSelected = selectedPlaceCategory === catKey;
                     return (
                       <Pressable
-                        key={cat}
-                        onPress={() => setSelectedPlaceCategory(cat)}
+                        key={catKey}
+                        onPress={() => setSelectedPlaceCategory(catKey)}
                         style={[
                           styles.filterChip,
-                          isSelected && styles.filterChipActive,
+                          {
+                            backgroundColor: isSelected ? theme.btnPrimaryBg : theme.card,
+                            borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                          },
                         ]}
                       >
                         <Text
                           style={[
                             styles.filterChipText,
-                            isSelected && styles.filterChipTextActive,
+                            {
+                              color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
                           ]}
                         >
-                          {cat}
-                        </Text>
-                      </Pressable>
-                    );
-                  })
-                : ['Tümü', ...EXPENSE_CATEGORIES].map((cat) => {
-                    const isSelected = selectedExpenseCategory === cat;
-                    return (
-                      <Pressable
-                        key={cat}
-                        onPress={() => setSelectedExpenseCategory(cat)}
-                        style={[
-                          styles.filterChip,
-                          isSelected && styles.filterChipActive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            isSelected && styles.filterChipTextActive,
-                          ]}
-                        >
-                          {cat}
+                          {t(catKey)}
                         </Text>
                       </Pressable>
                     );
                   })}
+                </>
+              ) : (
+                <>
+                  {/* All Expense Category Pill */}
+                  <Pressable
+                    onPress={() => setSelectedExpenseCategory('all')}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: selectedExpenseCategory === 'all' ? theme.btnPrimaryBg : theme.card,
+                        borderColor: selectedExpenseCategory === 'all' ? theme.btnPrimaryBg : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: selectedExpenseCategory === 'all' ? theme.btnPrimaryText : theme.textSecondary,
+                          fontWeight: selectedExpenseCategory === 'all' ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {t('expense_cat_all')}
+                    </Text>
+                  </Pressable>
+
+                  {/* Individual Expense Categories */}
+                  {EXPENSE_CATEGORIES.map((catKey) => {
+                    const isSelected = selectedExpenseCategory === catKey;
+                    return (
+                      <Pressable
+                        key={catKey}
+                        onPress={() => setSelectedExpenseCategory(catKey)}
+                        style={[
+                          styles.filterChip,
+                          {
+                            backgroundColor: isSelected ? theme.btnPrimaryBg : theme.card,
+                            borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            {
+                              color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
+                          ]}
+                        >
+                          {t(catKey)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </>
+              )}
             </ScrollView>
           </View>
         }
@@ -559,22 +688,22 @@ export default function TripDetailScreen({
         ListEmptyComponent={
           !loading && (
             <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: theme.btnSecondaryBg }]}>
                 {activeTab === 'places' ? (
-                  <Compass size={28} color="#71717A" strokeWidth={1.8} />
+                  <Compass size={28} color={theme.textMuted} strokeWidth={1.8} />
                 ) : (
-                  <CreditCard size={28} color="#71717A" strokeWidth={1.8} />
+                  <CreditCard size={28} color={theme.textMuted} strokeWidth={1.8} />
                 )}
               </View>
-              <Text style={styles.emptyTitle}>
+              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
                 {activeTab === 'places'
-                  ? 'Henüz Gezi Noktası Eklenmedi'
-                  : 'Henüz Harcama Kaydı Yok'}
+                  ? t('no_places_title')
+                  : t('no_expenses_title')}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
                 {activeTab === 'places'
-                  ? 'Ziyaret etmek istediğiniz plaj, müze veya kafeleri ekleyin.'
-                  : 'Konaklama, yeme-içme veya seyahat harcamalarınızı kaydedin.'}
+                  ? t('no_places_subtitle')
+                  : t('no_expenses_subtitle')}
               </Text>
             </View>
           )
@@ -587,11 +716,11 @@ export default function TripDetailScreen({
           onPress={activeTab === 'places' ? handleOpenAddPlace : handleOpenAddExpense}
           onPressIn={handleFabPressIn}
           onPressOut={handleFabPressOut}
-          style={styles.fabButton}
+          style={[styles.fabButton, { backgroundColor: theme.btnPrimaryBg }]}
         >
-          <Plus size={17} color="#FFFFFF" strokeWidth={2.4} />
-          <Text style={styles.fabText}>
-            {activeTab === 'places' ? 'Yer Ekle' : 'Harcama Ekle'}
+          <Plus size={17} color={theme.btnPrimaryText} strokeWidth={2.4} />
+          <Text style={[styles.fabText, { color: theme.btnPrimaryText }]}>
+            {activeTab === 'places' ? t('add_place') : t('add_expense')}
           </Text>
         </Pressable>
       </Animated.View>
@@ -600,25 +729,45 @@ export default function TripDetailScreen({
       <ModalSheet
         visible={isEditBudgetModalVisible}
         onClose={() => setIsEditBudgetModalVisible(false)}
-        title="Bütçe & Para Birimini Düzenle"
-        subtitle="Bu seyahat için hedef bütçeyi ve geçerli para birimini güncelleyin"
+        title={t('modal_edit_budget_title')}
+        subtitle={t('edit_budget_subtitle')}
+        theme={theme}
       >
         <View style={styles.formContainer}>
           {editBudgetError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{editBudgetError}</Text>
+            <View
+              style={[
+                styles.errorBox,
+                {
+                  backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                  borderLeftColor: '#DC2626',
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                {editBudgetError}
+              </Text>
             </View>
           ) : null}
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Wallet size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Hedef Bütçe</Text>
+              <Wallet size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('target_budget')}
+              </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: 35000"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_budget')}
+              placeholderTextColor={theme.textMuted}
               keyboardType="numeric"
               value={editBudgetAmount}
               onChangeText={(text) => {
@@ -629,7 +778,9 @@ export default function TripDetailScreen({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Para Birimi</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('currency')}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -643,13 +794,18 @@ export default function TripDetailScreen({
                     onPress={() => setEditCurrency(item.symbol)}
                     style={[
                       styles.currencyChip,
-                      isSelected && styles.currencyChipSelected,
+                      {
+                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
+                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.currencyChipText,
-                        isSelected && styles.currencyChipTextSelected,
+                        {
+                          color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                        },
                       ]}
                     >
                       {item.label}
@@ -663,16 +819,20 @@ export default function TripDetailScreen({
           <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsEditBudgetModalVisible(false)}
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { backgroundColor: theme.btnSecondaryBg }]}
             >
-              <Text style={styles.cancelButtonText}>Vazgeç</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.btnSecondaryText }]}>
+                {t('cancel')}
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={handleSaveBudget}
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: theme.btnPrimaryBg }]}
             >
-              <Text style={styles.saveButtonText}>Güncelle</Text>
+              <Text style={[styles.saveButtonText, { color: theme.btnPrimaryText }]}>
+                {t('update')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -682,24 +842,42 @@ export default function TripDetailScreen({
       <ModalSheet
         visible={isPlaceModalVisible}
         onClose={() => setIsPlaceModalVisible(false)}
-        title="Yeni Gezi Noktası Ekle"
-        subtitle="Ziyaret edeceğiniz yerleri ve rotanızı not edin"
+        title={t('modal_add_place_title')}
+        subtitle={t('modal_add_place_subtitle')}
+        theme={theme}
       >
         <View style={styles.formContainer}>
           {placeError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{placeError}</Text>
+            <View
+              style={[
+                styles.errorBox,
+                {
+                  backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                  borderLeftColor: '#DC2626',
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                {placeError}
+              </Text>
             </View>
           ) : null}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Yer / Mekan Adı <Text style={styles.requiredStar}>*</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('place_name')} <Text style={styles.requiredStar}>*</Text>
             </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: Kaputaş Plajı, Antik Tiyatro"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_place_name')}
+              placeholderTextColor={theme.textMuted}
               value={placeName}
               onChangeText={(text) => {
                 setPlaceName(text);
@@ -709,30 +887,38 @@ export default function TripDetailScreen({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Kategori</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('category')}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryPillsScroll}
             >
-              {PLACE_CATEGORIES.map((cat) => {
-                const isSelected = placeCategory === cat;
+              {PLACE_CATEGORIES.map((catKey) => {
+                const isSelected = placeCategory === catKey;
                 return (
                   <Pressable
-                    key={cat}
-                    onPress={() => setPlaceCategory(cat)}
+                    key={catKey}
+                    onPress={() => setPlaceCategory(catKey)}
                     style={[
                       styles.categoryPill,
-                      isSelected && styles.categoryPillSelected,
+                      {
+                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
+                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.categoryPillText,
-                        isSelected && styles.categoryPillTextSelected,
+                        {
+                          color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                          fontWeight: isSelected ? '700' : '500',
+                        },
                       ]}
                     >
-                      {cat}
+                      {t(catKey)}
                     </Text>
                   </Pressable>
                 );
@@ -742,13 +928,22 @@ export default function TripDetailScreen({
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Calendar size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Ziyaret Tarihi</Text>
+              <Calendar size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('visit_date')}
+              </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="YYYY-AA-GG"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.textMuted}
               value={placeDate}
               onChangeText={setPlaceDate}
             />
@@ -756,13 +951,23 @@ export default function TripDetailScreen({
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <FileText size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Gezi Notları (İsteğe Bağlı)</Text>
+              <FileText size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('place_notes')}
+              </Text>
             </View>
             <TextInput
-              style={[styles.textInput, styles.textAreaInput]}
-              placeholder="Giriş ücreti, en iyi saatler, yanına alman gerekenler..."
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                styles.textAreaInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_place_notes')}
+              placeholderTextColor={theme.textMuted}
               multiline
               numberOfLines={3}
               value={placeNotes}
@@ -773,16 +978,20 @@ export default function TripDetailScreen({
           <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsPlaceModalVisible(false)}
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { backgroundColor: theme.btnSecondaryBg }]}
             >
-              <Text style={styles.cancelButtonText}>Vazgeç</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.btnSecondaryText }]}>
+                {t('cancel')}
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={handleSavePlace}
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: theme.btnPrimaryBg }]}
             >
-              <Text style={styles.saveButtonText}>Yeri Kaydet</Text>
+              <Text style={[styles.saveButtonText, { color: theme.btnPrimaryText }]}>
+                {t('save')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -792,24 +1001,42 @@ export default function TripDetailScreen({
       <ModalSheet
         visible={isExpenseModalVisible}
         onClose={() => setIsExpenseModalVisible(false)}
-        title="Yeni Harcama Kaydı"
-        subtitle="Bütçenizi kontrol etmek için seyahat giderlerinizi ekleyin"
+        title={t('modal_add_expense_title')}
+        subtitle={t('modal_add_expense_subtitle')}
+        theme={theme}
       >
         <View style={styles.formContainer}>
           {expenseError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{expenseError}</Text>
+            <View
+              style={[
+                styles.errorBox,
+                {
+                  backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                  borderLeftColor: '#DC2626',
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                {expenseError}
+              </Text>
             </View>
           ) : null}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Harcama Başlığı <Text style={styles.requiredStar}>*</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('expense_title')} <Text style={styles.requiredStar}>*</Text>
             </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: Otel Konaklama, Akşam Yemeği"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_expense_title')}
+              placeholderTextColor={theme.textMuted}
               value={expenseTitle}
               onChangeText={(text) => {
                 setExpenseTitle(text);
@@ -820,15 +1047,22 @@ export default function TripDetailScreen({
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Wallet size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>
-                Tutar ({currentTrip.currency || '₺'}) <Text style={styles.requiredStar}>*</Text>
+              <Wallet size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('expense_amount')} ({currentTrip.currency || '₺'}) <Text style={styles.requiredStar}>*</Text>
               </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="Örn: 2400"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder={t('placeholder_expense_amount')}
+              placeholderTextColor={theme.textMuted}
               keyboardType="numeric"
               value={expenseAmount}
               onChangeText={(text) => {
@@ -839,30 +1073,38 @@ export default function TripDetailScreen({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Harcama Kategorisi</Text>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+              {t('category')}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryPillsScroll}
             >
-              {EXPENSE_CATEGORIES.map((cat) => {
-                const isSelected = expenseCategory === cat;
+              {EXPENSE_CATEGORIES.map((catKey) => {
+                const isSelected = expenseCategory === catKey;
                 return (
                   <Pressable
-                    key={cat}
-                    onPress={() => setExpenseCategory(cat)}
+                    key={catKey}
+                    onPress={() => setExpenseCategory(catKey)}
                     style={[
                       styles.categoryPill,
-                      isSelected && styles.categoryPillSelected,
+                      {
+                        backgroundColor: isSelected ? theme.btnPrimaryBg : theme.btnSecondaryBg,
+                        borderColor: isSelected ? theme.btnPrimaryBg : theme.border,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.categoryPillText,
-                        isSelected && styles.categoryPillTextSelected,
+                        {
+                          color: isSelected ? theme.btnPrimaryText : theme.textSecondary,
+                          fontWeight: isSelected ? '700' : '500',
+                        },
                       ]}
                     >
-                      {cat}
+                      {t(catKey)}
                     </Text>
                   </Pressable>
                 );
@@ -872,13 +1114,22 @@ export default function TripDetailScreen({
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Calendar size={13} color="#71717A" strokeWidth={2} />
-              <Text style={styles.inputLabel}>Harcama Tarihi</Text>
+              <Calendar size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('expense_date')}
+              </Text>
             </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="YYYY-AA-GG"
-              placeholderTextColor="#A1A1AA"
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.textMuted}
               value={expenseDate}
               onChangeText={setExpenseDate}
             />
@@ -887,16 +1138,20 @@ export default function TripDetailScreen({
           <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsExpenseModalVisible(false)}
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { backgroundColor: theme.btnSecondaryBg }]}
             >
-              <Text style={styles.cancelButtonText}>Vazgeç</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.btnSecondaryText }]}>
+                {t('cancel')}
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={handleSaveExpense}
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: theme.btnPrimaryBg }]}
             >
-              <Text style={styles.saveButtonText}>Harcamayı Kaydet</Text>
+              <Text style={[styles.saveButtonText, { color: theme.btnPrimaryText }]}>
+                {t('save')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -908,7 +1163,6 @@ export default function TripDetailScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
   },
   navBar: {
     flexDirection: 'row',
@@ -916,9 +1170,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E4E7',
   },
   backButton: {
     width: 32,
@@ -926,7 +1178,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F4F5',
   },
   navTitleWrap: {
     flex: 1,
@@ -935,7 +1186,6 @@ const styles = StyleSheet.create({
   navTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#09090B',
     letterSpacing: -0.2,
   },
   navCityRow: {
@@ -946,7 +1196,6 @@ const styles = StyleSheet.create({
   },
   navCityText: {
     fontSize: 12,
-    color: '#71717A',
     fontWeight: '500',
   },
   deleteTripBtn: {
@@ -955,7 +1204,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F4F5',
   },
   scrollContainer: {
     paddingHorizontal: 16,
@@ -966,28 +1214,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E4E4E7',
   },
   dateBannerText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#52525B',
   },
   budgetSection: {
     marginBottom: 14,
   },
   tabSwitcher: {
     flexDirection: 'row',
-    backgroundColor: '#F4F4F5',
     borderRadius: 12,
     padding: 3,
     marginBottom: 12,
+    borderWidth: 1,
   },
   tabButton: {
     flex: 1,
@@ -999,7 +1244,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabButtonActive: {
-    backgroundColor: '#18181B',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1008,28 +1252,15 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#71717A',
-  },
-  tabButtonTextActive: {
-    color: '#FFFFFF',
   },
   tabBadge: {
-    backgroundColor: '#E4E4E7',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 6,
   },
-  tabBadgeActive: {
-    backgroundColor: '#27272A',
-  },
   tabBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#52525B',
-  },
-  tabBadgeTextActive: {
-    color: '#FFFFFF',
   },
   categoryFiltersContainer: {
     flexDirection: 'row',
@@ -1040,22 +1271,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
-  },
-  filterChipActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B',
   },
   filterChipText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#52525B',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -1067,7 +1286,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -1075,13 +1293,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#09090B',
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#71717A',
     textAlign: 'center',
   },
   fabContainer: {
@@ -1098,13 +1314,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#18181B',
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
   },
   fabText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1114,14 +1328,11 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   errorBox: {
-    backgroundColor: '#FEE2E2',
     borderLeftWidth: 3,
-    borderLeftColor: '#DC2626',
     padding: 8,
     borderRadius: 6,
   },
   errorText: {
-    color: '#991B1B',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -1136,20 +1347,16 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#3F3F46',
   },
   requiredStar: {
     color: '#DC2626',
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#09090B',
   },
   textAreaInput: {
     minHeight: 70,
@@ -1164,22 +1371,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#F4F4F5',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
-  },
-  categoryPillSelected: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B',
   },
   categoryPillText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#52525B',
-  },
-  categoryPillTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   currencyScroll: {
     flexDirection: 'row',
@@ -1190,21 +1385,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#F4F4F5',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
-  },
-  currencyChipSelected: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B',
   },
   currencyChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#52525B',
-  },
-  currencyChipTextSelected: {
-    color: '#FFFFFF',
   },
   modalButtonsRow: {
     flexDirection: 'row',
@@ -1217,23 +1402,19 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#F4F4F5',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#52525B',
   },
   saveButton: {
     flex: 2,
     paddingVertical: 11,
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#18181B',
   },
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

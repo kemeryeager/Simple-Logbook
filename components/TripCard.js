@@ -8,40 +8,12 @@ import {
 } from 'react-native';
 import { MapPin, Calendar, ChevronRight, Trash2 } from 'lucide-react-native';
 import BudgetProgress from './BudgetProgress';
+import { useSettings } from '../contexts/SettingsContext';
+import { formatDateRange as formatWithLocale } from '../utils/translations';
 
-export const formatDateRange = (start, end) => {
-  if (!start && !end) return '';
-  const months = [
-    'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
-    'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara',
-  ];
-
-  const parse = (d) => {
-    if (!d || typeof d !== 'string') return null;
-    const parts = d.split('-');
-    if (parts.length !== 3) return null;
-    const day = parseInt(parts[2], 10);
-    const monthIndex = parseInt(parts[1], 10) - 1;
-    const year = parts[0];
-    return { day, month: months[monthIndex] || parts[1], year };
-  };
-
-  const s = parse(start);
-  const e = parse(end);
-
-  if (s && e) {
-    if (s.year === e.year) {
-      if (s.month === e.month) {
-        return `${s.day} - ${e.day} ${s.month} ${s.year}`;
-      }
-      return `${s.day} ${s.month} - ${e.day} ${e.month} ${s.year}`;
-    }
-    return `${s.day} ${s.month} ${s.year} - ${e.day} ${e.month} ${e.year}`;
-  }
-
-  if (s) return `${s.day} ${s.month} ${s.year}`;
-  if (e) return `${e.day} ${e.month} ${e.year}`;
-  return start || end || '';
+// Keep export for backward compatibility
+export const formatDateRange = (start, end, lang = 'tr') => {
+  return formatWithLocale(start, end, lang);
 };
 
 export default function TripCard({
@@ -50,6 +22,7 @@ export default function TripCard({
   onPress,
   onDelete,
 }) {
+  const { theme, t, isDark, language } = useSettings();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -70,27 +43,36 @@ export default function TripCard({
     }).start();
   };
 
-  const dateText = formatDateRange(trip.startDate, trip.endDate);
+  const dateText = formatDateRange(trip.startDate, trip.endDate, language);
 
   return (
-    <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View
+      style={[
+        styles.cardWrapper,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={styles.cardContent}
-        android_ripple={{ color: '#F4F4F5' }}
+        android_ripple={{ color: theme.btnSecondaryBg }}
       >
         {/* Card Header: Title & Delete */}
         <View style={styles.headerRow}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={1}>
               {trip.title}
             </Text>
             {trip.city ? (
               <View style={styles.cityRow}>
-                <MapPin size={12} color="#71717A" strokeWidth={2} />
-                <Text style={styles.cityText} numberOfLines={1}>
+                <MapPin size={12} color={theme.textMuted} strokeWidth={2} />
+                <Text style={[styles.cityText, { color: theme.textSecondary }]} numberOfLines={1}>
                   {trip.city}
                 </Text>
               </View>
@@ -104,12 +86,14 @@ export default function TripCard({
                 onDelete(trip);
               }}
               hitSlop={8}
+              accessibilityLabel={t('delete')}
               style={({ pressed }) => [
                 styles.deleteBtn,
-                pressed && { backgroundColor: '#FEE2E2' },
+                { backgroundColor: theme.btnSecondaryBg },
+                pressed && { backgroundColor: isDark ? '#450A0A' : '#FEE2E2' },
               ]}
             >
-              <Trash2 size={15} color="#A1A1AA" strokeWidth={1.8} />
+              <Trash2 size={15} color={isDark ? '#F87171' : '#A1A1AA'} strokeWidth={1.8} />
             </Pressable>
           )}
         </View>
@@ -117,13 +101,13 @@ export default function TripCard({
         {/* Date Row */}
         {dateText ? (
           <View style={styles.dateRow}>
-            <Calendar size={12} color="#71717A" strokeWidth={2} />
-            <Text style={styles.dateText}>{dateText}</Text>
+            <Calendar size={12} color={theme.textMuted} strokeWidth={2} />
+            <Text style={[styles.dateText, { color: theme.textMuted }]}>{dateText}</Text>
           </View>
         ) : null}
 
         {/* Divider */}
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: theme.borderMuted }]} />
 
         {/* Compact Budget Progress */}
         <BudgetProgress
@@ -134,14 +118,14 @@ export default function TripCard({
         />
 
         {/* Card Footer: Detail Link */}
-        <View style={styles.footerRow}>
-          <Text style={styles.footerHint}>
+        <View style={[styles.footerRow, { borderTopColor: theme.borderMuted }]}>
+          <Text style={[styles.footerHint, { color: theme.textMuted }]}>
             {stats?.expenseCount
-              ? `${stats.expenseCount} harcama kaydı`
-              : 'Detayları ve notları gör'}
+              ? `${stats.expenseCount} ${t('expenses').toLowerCase()}`
+              : t('places_tab')}
           </Text>
-          <View style={styles.chevronWrap}>
-            <ChevronRight size={14} color="#18181B" strokeWidth={2.4} />
+          <View style={[styles.chevronWrap, { backgroundColor: theme.btnSecondaryBg }]}>
+            <ChevronRight size={14} color={theme.textPrimary} strokeWidth={2.4} />
           </View>
         </View>
       </Pressable>
@@ -154,9 +138,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -180,7 +162,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#09090B',
     letterSpacing: -0.2,
     marginBottom: 3,
   },
@@ -192,7 +173,6 @@ const styles = StyleSheet.create({
   cityText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#52525B',
   },
   deleteBtn: {
     width: 28,
@@ -200,7 +180,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F4F5',
   },
   dateRow: {
     flexDirection: 'row',
@@ -211,11 +190,9 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#71717A',
   },
   divider: {
     height: 1,
-    backgroundColor: '#F4F4F5',
     marginBottom: 10,
   },
   footerRow: {
@@ -225,18 +202,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F4F4F5',
   },
   footerHint: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#71717A',
   },
   chevronWrap: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
