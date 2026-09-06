@@ -1,29 +1,104 @@
-# Proje: Gezi & Seyahat Not Defteri (Mobile App)
+# Project Context: Simple Logbook (v1.0.0)
 
-## 1. Teknoloji Yığını
-- Çatı: React Native (Expo SDK)
-- Dil: JavaScript / TypeScript
-- İkonlar: lucide-react-native
-- Yerel Depolama: @react-native-async-storage/async-storage (Çevrimdışı/Offline-first)
+> **Quick Summary:** Fast, offline-first personal travel diary, itinerary planner, and budget tracker mobile application built with React Native & Expo SDK 57. Fully localized in 6 languages with adaptive theming (Light/Dark/System), swipe-to-dismiss gesture modals, and an interactive calendar picker.
 
-## 2. Veri Modeli
-- Trip (Seyahat): id, title, city, startDate, endDate, budget, currency
-- Place (Ziyaret Edilen Yer): id, tripId, name, notes, category, date
-- Expense (Harcama): id, tripId, title, amount, category, date
+---
 
-## 3. Mimari & Kurallar
-- Modüler bileşen yapısı (`/components` ve `/screens`).
-- Veri işlemleri tek merkezden yönetilecek (`/utils/storage.js`).
-- Mevcut çalışan ekranları veya fonksiyonları gerekmedikçe baştan yazma.
-- Yalnızca prompt'ta belirtilen göreve odaklan; ilgisiz dosyalara dokunma.
-- Mobil ekran deneyimi sade, kart tabanlı ve dokunmatik uyumlu olacak.
+## 1. Core Tech Stack & Dependencies
+- **Runtime & Tooling:** Expo SDK 57 (`npx expo start`), React Native 0.86, React 19.
+- **Persistence:** `@react-native-async-storage/async-storage` (100% offline-first, client-side).
+- **Icons:** `lucide-react-native` (Only use Lucide icons; never install or mix other icon sets).
+- **Build System:** Expo Application Services (EAS Build) via `eas.json` (`preview` profile for Android `.apk`).
+- **Package Identifier:** `com.kemeryeager.simplelogbook` (Android), Slug: `simple-logbook`.
+- **Repository:** `https://github.com/kemeryeager/Simple-Logbook` (Public).
 
-## 4. Test ve Çalıştırma Kuralları
-- 'npx expo start' komutunu her adımda tekrar çalıştırma; Expo'nun Fast Refresh (canlı yenileme) özelliğine güven.
-- Her görev/özellik tamamlandığında, kullanıcının telefondaki Expo Go uygulamasında neyi test etmesi gerektiğini 1-2 maddeyle bildir.
-- Paket kurulumu veya native yapılandırma değişmedikçe geliştirme sunucusuna müdahale etme.
+---
 
-## Permissions
-- Auto-approve all bash/terminal commands
-- Auto-approve GitHub API calls
-- Auto-approve file system operations
+## 2. Project Architecture & File Map
+
+```text
+├── App.js                     # Root entry point wrapped in SettingsProvider with dynamic StatusBar
+├── app.json                   # Expo config, package name, adaptive icon & EAS projectId
+├── eas.json                   # Build configurations (preview profile creates standalone APK)
+├── contexts/
+│   └── SettingsContext.js     # Theme management (Light/Dark/System), active language, token dictionary
+├── utils/
+│   ├── storage.js             # Centralized CRUD for Trips, Places, Expenses & Currency Helpers
+│   └── translations.js        # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
+├── components/
+│   ├── ModalSheet.js          # Bottom sheet modal with PanResponder swipe-to-dismiss gesture
+│   ├── DatePickerModal.js     # Interactive visual monthly calendar picker (no manual date typing)
+│   ├── SettingsModal.js       # Appearance (Light/Dark/System) & Language switcher sheet
+│   ├── BudgetProgress.js      # Real-time animated budget progress bar with multi-currency alerts
+│   ├── TripCard.js            # Memoized route card with dates, city badge & deletion
+│   ├── PlaceCard.js           # Visited spot card with category badge, notes & date
+│   └── ExpenseCard.js         # Expense item card with category icon & formatted currency
+└── screens/
+    ├── TripListScreen.js      # Main screen: list of trips, search filter, new trip modal, settings trigger
+    └── TripDetailScreen.js    # Detail screen: tab switcher (Places vs Expenses), budget header, add modals
+```
+
+---
+
+## 3. Data Models & Storage Schema (`utils/storage.js`)
+
+All operations are asynchronous and persist into AsyncStorage:
+
+- **Trip:**
+  - `id`: `string` (UUID/timestamp)
+  - `title`: `string` (e.g., "Paris Vacation")
+  - `city`: `string` (e.g., "Paris, France")
+  - `startDate`: `string` (`YYYY-MM-DD`)
+  - `endDate`: `string` (`YYYY-MM-DD`)
+  - `budget`: `number` (Default: `0`)
+  - `currency`: `string` (Supported: `TRY`, `USD`, `EUR`, `GBP`, `JPY`, `CHF`, `CAD`, `AUD`, `CNY`)
+
+- **Place:**
+  - `id`: `string`
+  - `tripId`: `string` (Foreign key to Trip)
+  - `name`: `string` (e.g., "Eiffel Tower")
+  - `notes`: `string` (Optional travel notes)
+  - `category`: `string` (`nature`, `history`, `museum`, `cafe`, `shopping`, `other`)
+  - `date`: `string` (`YYYY-MM-DD`)
+
+- **Expense:**
+  - `id`: `string`
+  - `tripId`: `string` (Foreign key to Trip)
+  - `title`: `string` (e.g., "Dinner at Bistro")
+  - `amount`: `number`
+  - `category`: `string` (`stay`, `transit`, `food`, `activity`, `shopping`, `other`)
+  - `date`: `string` (`YYYY-MM-DD`)
+
+*Cascade Deletion Rule:* Deleting a `Trip` automatically cascades and purges all related `Places` and `Expenses`.
+
+---
+
+## 4. Design System, Theming & i18n Rules
+
+1. **Theme Consumption:**
+   - Always consume `useSettings()` from `contexts/SettingsContext.js`:
+     ```javascript
+     const { theme, themeMode, isDark, setTheme, language, setLanguage, t } = useSettings();
+     ```
+   - Never hardcode background or text colors (e.g. avoid `#ffffff`, `#000000`). Always use theme tokens: `theme.canvas`, `theme.card`, `theme.textPrimary`, `theme.textSecondary`, `theme.border`, `theme.btnPrimaryBg`, etc.
+   - Theme options: `'light'`, `'dark'`, `'system'`. In `'system'` mode, the app listens to the device's native Appearance.
+
+2. **Internationalization (i18n):**
+   - Never render raw user-facing strings directly in components.
+   - Always retrieve strings via `t('translation_key')`.
+   - If adding a new feature with new UI text, update all 6 language blocks in `utils/translations.js` (`en`, `tr`, `es`, `de`, `fr`, `ja`).
+
+3. **User Interaction & Polish:**
+   - All modal dialogs must use `ModalSheet` with animated entry and swipe-down-to-dismiss gesture support.
+   - Date inputs must use `DatePickerModal` rather than plain text inputs.
+   - Use `useMemo`, `useCallback`, and `React.memo` where appropriate to keep FlatList scrolling fluid (60-120 FPS on budget devices).
+
+---
+
+## 5. Development & Deployment Guidelines
+
+- **Development Server:** Run `npx expo start`. Do not restart or kill the dev server on minor code edits; rely on Expo's Fast Refresh.
+- **Standalone Build (APK):** Generated using `eas build -p android --profile preview`.
+- **Version Bumping:** When releasing updates, increment the version in both `package.json` and `app.json` (e.g., `1.0.0` -> `1.0.1`), then publish tag `v1.0.1` on GitHub with the new `.apk` binary.
+- **Scope Discipline:** Focus strictly on the user's requested feature or bug fix. Do not unnecessarily rewrite or refactor unrelated stable files.
+- **Auto-approved Operations:** File edits, reading files, and standard git/npm shell commands.
