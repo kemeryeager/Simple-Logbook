@@ -55,8 +55,8 @@ export default function TripCard({
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.98,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
       useNativeDriver: true,
     }).start();
   };
@@ -64,8 +64,8 @@ export default function TripCard({
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
       useNativeDriver: true,
     }).start();
   };
@@ -79,7 +79,7 @@ export default function TripCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={styles.cardContent}
-        android_ripple={{ color: '#F1F5F9' }}
+        android_ripple={{ color: '#F4F4F5' }}
       >
         {/* Card Header: Title & Delete */}
         <View style={styles.headerRow}>
@@ -89,7 +89,7 @@ export default function TripCard({
             </Text>
             {trip.city ? (
               <View style={styles.cityRow}>
-                <MapPin size={13} color="#0284C7" strokeWidth={2.2} />
+                <MapPin size={12} color="#71717A" strokeWidth={2} />
                 <Text style={styles.cityText} numberOfLines={1}>
                   {trip.city}
                 </Text>
@@ -106,10 +106,10 @@ export default function TripCard({
               hitSlop={8}
               style={({ pressed }) => [
                 styles.deleteBtn,
-                pressed && { backgroundColor: '#FFE4E6' },
+                pressed && { backgroundColor: '#FEE2E2' },
               ]}
             >
-              <Trash2 size={16} color="#94A3B8" strokeWidth={2} />
+              <Trash2 size={15} color="#A1A1AA" strokeWidth={1.8} />
             </Pressable>
           )}
         </View>
@@ -117,7 +117,7 @@ export default function TripCard({
         {/* Date Row */}
         {dateText ? (
           <View style={styles.dateRow}>
-            <Calendar size={13} color="#64748B" strokeWidth={2} />
+            <Calendar size={12} color="#71717A" strokeWidth={2} />
             <Text style={styles.dateText}>{dateText}</Text>
           </View>
         ) : null}
@@ -138,10 +138,10 @@ export default function TripCard({
           <Text style={styles.footerHint}>
             {stats?.expenseCount
               ? `${stats.expenseCount} harcama kaydı`
-              : 'Detayları ve yerleri gör'}
+              : 'Detayları ve notları gör'}
           </Text>
           <View style={styles.chevronWrap}>
-            <ChevronRight size={16} color="#0284C7" strokeWidth={2.2} />
+            <ChevronRight size={14} color="#18181B" strokeWidth={2.4} />
           </View>
         </View>
       </Pressable>
@@ -152,37 +152,37 @@ export default function TripCard({
 const styles = StyleSheet.create({
   cardWrapper: {
     marginHorizontal: 16,
-    marginBottom: 14,
-    borderRadius: 20,
+    marginBottom: 12,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    borderColor: '#E4E4E7',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
     overflow: 'hidden',
   },
   cardContent: {
-    padding: 18,
+    padding: 16,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   titleContainer: {
     flex: 1,
     marginRight: 10,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
     letterSpacing: -0.2,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   cityRow: {
     flexDirection: 'row',
@@ -190,53 +190,53 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cityText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0284C7',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#52525B',
   },
   deleteBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F4F5',
   },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 14,
+    gap: 5,
+    marginBottom: 12,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#71717A',
   },
   divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
-    marginBottom: 12,
+    backgroundColor: '#F4F4F5',
+    marginBottom: 10,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 10,
+    marginTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+    borderTopColor: '#F4F4F5',
   },
   footerHint: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    color: '#94A3B8',
+    color: '#71717A',
   },
   chevronWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F0F9FF',
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
   },

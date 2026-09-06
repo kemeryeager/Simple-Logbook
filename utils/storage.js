@@ -12,6 +12,19 @@ export const KEYS = {
   EXPENSES: '@gezi_notlari_expenses',
 };
 
+// Dünyada en çok kullanılan 8 para birimi + Türk Lirası
+export const WORLD_CURRENCIES = [
+  { code: 'TRY', symbol: '₺', label: '₺ TRY', name: 'Türk Lirası' },
+  { code: 'USD', symbol: '$', label: '$ USD', name: 'Amerikan Doları' },
+  { code: 'EUR', symbol: '€', label: '€ EUR', name: 'Euro' },
+  { code: 'GBP', symbol: '£', label: '£ GBP', name: 'İngiliz Sterlini' },
+  { code: 'JPY', symbol: '¥', label: '¥ JPY', name: 'Japon Yeni' },
+  { code: 'CHF', symbol: 'CHF', label: 'CHF', name: 'İsviçre Frangı' },
+  { code: 'CAD', symbol: 'C$', label: 'C$ CAD', name: 'Kanada Doları' },
+  { code: 'AUD', symbol: 'A$', label: 'A$ AUD', name: 'Avustralya Doları' },
+  { code: 'CNY', symbol: 'CN¥', label: 'CN¥ CNY', name: 'Çin Yuanı' },
+];
+
 // Seed sample trip if first time launching for delightful initial experience
 export const INITIAL_TRIPS = [
   {
@@ -413,6 +426,10 @@ export const saveTrip = async (trip) => {
     console.error('Error saving trip:', error);
     throw error;
   }
+};
+
+export const updateTrip = async (tripId, updates) => {
+  return await saveTrip({ id: tripId, ...updates });
 };
 
 export const deleteTrip = async (tripId) => {

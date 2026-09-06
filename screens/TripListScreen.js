@@ -11,6 +11,7 @@ import {
   Platform,
   StatusBar as RNStatusBar,
   Animated,
+  ScrollView,
 } from 'react-native';
 import {
   Compass,
@@ -24,9 +25,7 @@ import {
 } from 'lucide-react-native';
 import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
-import { getTrips, saveTrip, deleteTrip, getTripStats } from '../utils/storage';
-
-const CURRENCY_OPTIONS = ['₺', '$', '€', '£'];
+import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
 export default function TripListScreen({ onSelectTrip }) {
   const [trips, setTrips] = useState([]);
@@ -80,7 +79,6 @@ export default function TripListScreen({ onSelectTrip }) {
   };
 
   const handleOpenAddModal = () => {
-    // Prefill default dates
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -112,7 +110,7 @@ export default function TripListScreen({ onSelectTrip }) {
         currency: currency || '₺',
       };
 
-      const saved = await saveTrip(newTripData);
+      await saveTrip(newTripData);
       setIsAddModalVisible(false);
       await loadData();
     } catch (error) {
@@ -152,10 +150,10 @@ export default function TripListScreen({ onSelectTrip }) {
 
   const handleFabPressIn = () => {
     Animated.spring(fabScale, {
-      toValue: 0.94,
+      toValue: 0.95,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
     }).start();
   };
 
@@ -163,8 +161,8 @@ export default function TripListScreen({ onSelectTrip }) {
     Animated.spring(fabScale, {
       toValue: 1,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
     }).start();
   };
 
@@ -177,7 +175,7 @@ export default function TripListScreen({ onSelectTrip }) {
         <View style={styles.brandingCol}>
           <View style={styles.logoRow}>
             <View style={styles.logoIcon}>
-              <Compass size={22} color="#0284C7" strokeWidth={2.4} />
+              <Compass size={18} color="#FFFFFF" strokeWidth={2.4} />
             </View>
             <Text style={styles.appName}>RotaDefteri</Text>
           </View>
@@ -186,22 +184,24 @@ export default function TripListScreen({ onSelectTrip }) {
 
         <Pressable
           onPress={handleOpenAddModal}
-          style={styles.headerAddBtn}
-          android_ripple={{ color: '#E0F2FE' }}
+          style={({ pressed }) => [
+            styles.headerAddBtn,
+            pressed && { opacity: 0.85 },
+          ]}
         >
-          <Plus size={18} color="#0284C7" strokeWidth={2.4} />
-          <Text style={styles.headerAddText}>Yeni</Text>
+          <Plus size={15} color="#FFFFFF" strokeWidth={2.4} />
+          <Text style={styles.headerAddText}>Yeni Seyahat</Text>
         </Pressable>
       </View>
 
       {/* Search Input Bar */}
       <View style={styles.searchSection}>
         <View style={styles.searchBarContainer}>
-          <Search size={18} color="#94A3B8" strokeWidth={2} style={styles.searchIcon} />
+          <Search size={16} color="#A1A1AA" strokeWidth={2} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Seyahat veya şehir ara..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#A1A1AA"
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
@@ -209,7 +209,7 @@ export default function TripListScreen({ onSelectTrip }) {
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')} hitSlop={8} style={styles.clearSearchBtn}>
-              <X size={15} color="#94A3B8" />
+              <X size={14} color="#71717A" />
             </Pressable>
           )}
         </View>
@@ -235,15 +235,15 @@ export default function TripListScreen({ onSelectTrip }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#0284C7"
-            colors={['#0284C7']}
+            tintColor="#18181B"
+            colors={['#18181B']}
           />
         }
         ListHeaderComponent={
           filteredTrips.length > 0 ? (
             <View style={styles.listHeader}>
               <Text style={styles.listHeaderTitle}>Planlanan Rotalar</Text>
-              <Text style={styles.listHeaderBadge}>{filteredTrips.length} seyahat</Text>
+              <Text style={styles.listHeaderBadge}>{filteredTrips.length} rota</Text>
             </View>
           ) : null
         }
@@ -251,21 +251,21 @@ export default function TripListScreen({ onSelectTrip }) {
           !loading && (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <Sparkles size={36} color="#0284C7" strokeWidth={1.8} />
+                <Compass size={32} color="#71717A" strokeWidth={1.8} />
               </View>
               <Text style={styles.emptyTitle}>
                 {searchQuery ? 'Aramanıza Uygun Rota Bulunamadı' : 'Henüz Bir Seyahat Eklenmedi'}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery
-                  ? `"${searchQuery}" ile eşleşen bir seyahat kaydı bulunamadı. Aramanızı değiştirebilir veya yeni bir rota ekleyebilirsiniz.`
-                  : 'Yeni bir seyahat rotası oluşturun, ziyaret edeceğiniz yerleri ve bütçenizi kolayca takip edin.'}
+                  ? `"${searchQuery}" ile eşleşen bir seyahat kaydı bulunamadı.`
+                  : 'Yeni bir seyahat rotası oluşturun, bütçenizi ve ziyaret yerlerinizi kolayca takip edin.'}
               </Text>
               <Pressable
                 onPress={handleOpenAddModal}
                 style={styles.emptyActionButton}
               >
-                <Plus size={18} color="#FFFFFF" strokeWidth={2.4} />
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.4} />
                 <Text style={styles.emptyActionText}>Yeni Seyahat Planla</Text>
               </Pressable>
             </View>
@@ -282,7 +282,7 @@ export default function TripListScreen({ onSelectTrip }) {
             onPressOut={handleFabPressOut}
             style={styles.fabButton}
           >
-            <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
+            <Plus size={18} color="#FFFFFF" strokeWidth={2.4} />
             <Text style={styles.fabText}>Seyahat Ekle</Text>
           </Pressable>
         </Animated.View>
@@ -310,7 +310,7 @@ export default function TripListScreen({ onSelectTrip }) {
             <TextInput
               style={styles.textInput}
               placeholder="Örn: Ege & Akdeniz Kaçamağı"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#A1A1AA"
               value={title}
               onChangeText={(text) => {
                 setTitle(text);
@@ -322,13 +322,13 @@ export default function TripListScreen({ onSelectTrip }) {
           {/* City / Destination */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <MapPin size={14} color="#0284C7" strokeWidth={2} />
+              <MapPin size={13} color="#71717A" strokeWidth={2} />
               <Text style={styles.inputLabel}>Şehir veya Rota</Text>
             </View>
             <TextInput
               style={styles.textInput}
               placeholder="Örn: Antalya, Kaş - Kalkan"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#A1A1AA"
               value={city}
               onChangeText={setCity}
             />
@@ -336,77 +336,82 @@ export default function TripListScreen({ onSelectTrip }) {
 
           {/* Dates Row */}
           <View style={styles.rowTwoCols}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
               <View style={styles.labelRow}>
-                <Calendar size={14} color="#64748B" strokeWidth={2} />
+                <Calendar size={13} color="#71717A" strokeWidth={2} />
                 <Text style={styles.inputLabel}>Başlangıç</Text>
               </View>
               <TextInput
                 style={styles.textInput}
                 placeholder="YYYY-AA-GG"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="#A1A1AA"
                 value={startDate}
                 onChangeText={setStartDate}
               />
             </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 6 }]}>
               <View style={styles.labelRow}>
-                <Calendar size={14} color="#64748B" strokeWidth={2} />
+                <Calendar size={13} color="#71717A" strokeWidth={2} />
                 <Text style={styles.inputLabel}>Bitiş</Text>
               </View>
               <TextInput
                 style={styles.textInput}
                 placeholder="YYYY-AA-GG"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="#A1A1AA"
                 value={endDate}
                 onChangeText={setEndDate}
               />
             </View>
           </View>
 
-          {/* Budget & Currency */}
+          {/* Budget Input */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
-              <Wallet size={14} color="#059669" strokeWidth={2} />
+              <Wallet size={13} color="#71717A" strokeWidth={2} />
               <Text style={styles.inputLabel}>Hedef Bütçe</Text>
             </View>
-            <View style={styles.budgetRow}>
-              <TextInput
-                style={[styles.textInput, styles.budgetInput]}
-                placeholder="25000"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={budget}
-                onChangeText={setBudget}
-              />
+            <TextInput
+              style={styles.textInput}
+              placeholder="Örn: 30000"
+              placeholderTextColor="#A1A1AA"
+              keyboardType="numeric"
+              value={budget}
+              onChangeText={setBudget}
+            />
+          </View>
 
-              {/* Currency Selector Chips */}
-              <View style={styles.currencyChips}>
-                {CURRENCY_OPTIONS.map((curr) => {
-                  const isSelected = currency === curr;
-                  return (
-                    <Pressable
-                      key={curr}
-                      onPress={() => setCurrency(curr)}
+          {/* Currency Selector Chips (Top 8 Currencies + TRY) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Para Birimi</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.currencyScroll}
+            >
+              {WORLD_CURRENCIES.map((item) => {
+                const isSelected = currency === item.symbol;
+                return (
+                  <Pressable
+                    key={item.code}
+                    onPress={() => setCurrency(item.symbol)}
+                    style={[
+                      styles.currencyChip,
+                      isSelected && styles.currencyChipSelected,
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.currencyChip,
-                        isSelected && styles.currencyChipSelected,
+                        styles.currencyChipText,
+                        isSelected && styles.currencyChipTextSelected,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.currencyChipText,
-                          isSelected && styles.currencyChipTextSelected,
-                        ]}
-                      >
-                        {curr}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Modal Action Buttons */}
@@ -434,15 +439,15 @@ export default function TripListScreen({ onSelectTrip }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FAFAFA',
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   brandingCol: {
     flex: 1,
@@ -453,62 +458,60 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#E0F2FE',
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#18181B',
     alignItems: 'center',
     justifyContent: 'center',
   },
   appName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
+    color: '#09090B',
+    letterSpacing: -0.4,
   },
   appTagline: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    color: '#64748B',
-    marginTop: 2,
+    color: '#71717A',
+    marginTop: 1,
   },
   headerAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#18181B',
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderRadius: 8,
   },
   headerAddText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0284C7',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   searchSection: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
+    borderColor: '#E4E4E7',
+    borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
+    height: 40,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
+    fontSize: 13,
+    color: '#09090B',
     paddingVertical: 0,
   },
   clearSearchBtn: {
@@ -518,25 +521,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 18,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
     marginTop: 4,
   },
   listHeaderTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: '#71717A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   listHeaderBadge: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#0284C7',
-    backgroundColor: '#E0F2FE',
+    color: '#52525B',
+    backgroundColor: '#F4F4F5',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 999,
+    borderRadius: 6,
   },
   listContent: {
     paddingBottom: 90,
@@ -548,148 +551,138 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 36,
+    paddingHorizontal: 32,
     paddingVertical: 40,
   },
   emptyIconCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#E0F2FE',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   emptySubtitle: {
     fontSize: 13,
-    lineHeight: 20,
-    color: '#64748B',
+    lineHeight: 18,
+    color: '#71717A',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   emptyActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 6,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   emptyActionText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   fabContainer: {
     position: 'absolute',
     bottom: 24,
-    right: 20,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    right: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   fabButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 999,
+    gap: 6,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Modal Form Styles
   formContainer: {
-    gap: 16,
+    gap: 14,
   },
   errorBox: {
-    backgroundColor: '#FFE4E6',
-    borderLeftWidth: 4,
-    borderLeftColor: '#E11D48',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    borderLeftWidth: 3,
+    borderLeftColor: '#DC2626',
+    padding: 8,
+    borderRadius: 6,
   },
   errorText: {
-    color: '#9F1239',
-    fontSize: 13,
+    color: '#991B1B',
+    fontSize: 12,
     fontWeight: '500',
   },
   inputGroup: {
-    gap: 6,
+    gap: 5,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   inputLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: '#3F3F46',
   },
   requiredStar: {
-    color: '#E11D48',
+    color: '#DC2626',
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#0F172A',
+    borderColor: '#E4E4E7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#09090B',
   },
   rowTwoCols: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  budgetRow: {
+  currencyScroll: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  budgetInput: {
-    flex: 1,
-  },
-  currencyChips: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 3,
+    gap: 6,
+    paddingVertical: 2,
   },
   currencyChip: {
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
   },
   currencyChipSelected: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#18181B',
+    borderColor: '#18181B',
   },
   currencyChipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#52525B',
   },
   currencyChipTextSelected: {
     color: '#FFFFFF',
@@ -697,31 +690,31 @@ const styles = StyleSheet.create({
   modalButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
+    gap: 10,
+    marginTop: 6,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 13,
+    paddingVertical: 11,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    backgroundColor: '#F4F4F5',
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#52525B',
   },
   saveButton: {
     flex: 2,
-    paddingVertical: 13,
+    paddingVertical: 11,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#0284C7',
+    borderRadius: 10,
+    backgroundColor: '#18181B',
   },
   saveButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

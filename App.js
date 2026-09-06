@@ -40,6 +40,7 @@ export default function App() {
           trip={selectedTrip}
           onBack={handleBackToList}
           onTripDeleted={handleBackToList}
+          onTripUpdated={(updatedTrip) => setSelectedTrip(updatedTrip)}
         />
       ) : (
         <TripListScreen onSelectTrip={handleSelectTrip} />
@@ -51,6 +52,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FAFAFA',
   },
 });

@@ -23,7 +23,7 @@ import {
   Compass,
   CreditCard,
   X,
-  Sparkles,
+  FileText,
 } from 'lucide-react-native';
 import BudgetProgress from '../components/BudgetProgress';
 import PlaceCard from '../components/PlaceCard';
@@ -39,6 +39,8 @@ import {
   deleteExpense,
   getTripStats,
   deleteTrip,
+  updateTrip,
+  WORLD_CURRENCIES,
 } from '../utils/storage';
 
 const PLACE_CATEGORIES = [
@@ -59,7 +61,13 @@ const EXPENSE_CATEGORIES = [
   'Diğer',
 ];
 
-export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
+export default function TripDetailScreen({
+  trip,
+  onBack,
+  onTripDeleted,
+  onTripUpdated,
+}) {
+  const [currentTrip, setCurrentTrip] = useState(trip);
   const [activeTab, setActiveTab] = useState('places'); // 'places' | 'expenses'
   const [places, setPlaces] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -70,6 +78,12 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
   // Filters
   const [selectedPlaceCategory, setSelectedPlaceCategory] = useState('Tümü');
   const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('Tümü');
+
+  // Edit Budget Modal State
+  const [isEditBudgetModalVisible, setIsEditBudgetModalVisible] = useState(false);
+  const [editBudgetAmount, setEditBudgetAmount] = useState(String(currentTrip?.budget || ''));
+  const [editCurrency, setEditCurrency] = useState(currentTrip?.currency || '₺');
+  const [editBudgetError, setEditBudgetError] = useState('');
 
   // Add Place Modal State
   const [isPlaceModalVisible, setIsPlaceModalVisible] = useState(false);
@@ -90,13 +104,20 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
   // FAB scale animation
   const fabScale = useRef(new Animated.Value(1)).current;
 
-  const loadTripData = useCallback(async () => {
-    if (!trip?.id) return;
+  // Sync currentTrip when prop changes
+  useEffect(() => {
+    if (trip) {
+      setCurrentTrip(trip);
+    }
+  }, [trip]);
+
+  const loadTripData = useCallback(async (targetTrip = currentTrip) => {
+    if (!targetTrip?.id) return;
     try {
       const [placesData, expensesData, statsData] = await Promise.all([
-        getPlaces(trip.id),
-        getExpenses(trip.id),
-        getTripStats(trip.id, trip.budget),
+        getPlaces(targetTrip.id),
+        getExpenses(targetTrip.id),
+        getTripStats(targetTrip.id, targetTrip.budget),
       ]);
       setPlaces(placesData);
       setExpenses(expensesData);
@@ -107,7 +128,7 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [trip?.id, trip?.budget]);
+  }, [currentTrip]);
 
   useEffect(() => {
     loadTripData();
@@ -118,12 +139,43 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
     loadTripData();
   };
 
+  // Edit Budget Handlers
+  const handleOpenEditBudget = () => {
+    setEditBudgetAmount(String(currentTrip?.budget || ''));
+    setEditCurrency(currentTrip?.currency || '₺');
+    setEditBudgetError('');
+    setIsEditBudgetModalVisible(true);
+  };
+
+  const handleSaveBudget = async () => {
+    const rawBudget = parseFloat(editBudgetAmount);
+    if (isNaN(rawBudget) || rawBudget < 0) {
+      setEditBudgetError('Lütfen geçerli ve 0 veya üzeri bir bütçe girin.');
+      return;
+    }
+
+    try {
+      const updated = await updateTrip(currentTrip.id, {
+        budget: rawBudget,
+        currency: editCurrency || '₺',
+      });
+      setCurrentTrip(updated);
+      setIsEditBudgetModalVisible(false);
+      if (onTripUpdated) {
+        onTripUpdated(updated);
+      }
+      await loadTripData(updated);
+    } catch (err) {
+      setEditBudgetError('Bütçe güncellenirken bir hata oluştu.');
+    }
+  };
+
   // Place Handlers
   const handleOpenAddPlace = () => {
     setPlaceName('');
     setPlaceCategory(PLACE_CATEGORIES[0]);
     setPlaceNotes('');
-    setPlaceDate(trip.startDate || new Date().toISOString().split('T')[0]);
+    setPlaceDate(currentTrip.startDate || new Date().toISOString().split('T')[0]);
     setPlaceError('');
     setIsPlaceModalVisible(true);
   };
@@ -136,7 +188,7 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
 
     try {
       await savePlace({
-        tripId: trip.id,
+        tripId: currentTrip.id,
         name: placeName.trim(),
         category: placeCategory,
         notes: placeNotes.trim(),
@@ -176,7 +228,7 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
     setExpenseTitle('');
     setExpenseAmount('');
     setExpenseCategory(EXPENSE_CATEGORIES[0]);
-    setExpenseDate(trip.startDate || new Date().toISOString().split('T')[0]);
+    setExpenseDate(currentTrip.startDate || new Date().toISOString().split('T')[0]);
     setExpenseError('');
     setIsExpenseModalVisible(true);
   };
@@ -186,17 +238,17 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
       setExpenseError('Lütfen harcama başlığı girin.');
       return;
     }
-    const parsedAmount = parseFloat(expenseAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setExpenseError('Lütfen geçerli bir tutar girin.');
+    const rawAmt = parseFloat(expenseAmount);
+    if (isNaN(rawAmt) || rawAmt <= 0) {
+      setExpenseError("Harcama tutarı 0'dan büyük geçerli bir sayı olmalıdır.");
       return;
     }
 
     try {
       await saveExpense({
-        tripId: trip.id,
+        tripId: currentTrip.id,
         title: expenseTitle.trim(),
-        amount: parsedAmount,
+        amount: rawAmt,
         category: expenseCategory,
         date: expenseDate.trim(),
       });
@@ -232,7 +284,7 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
   const handleDeleteCurrentTrip = () => {
     Alert.alert(
       'Seyahati Sil',
-      `"${trip.title}" seyahatini ve tüm verilerini silmek istediğinizden emin misiniz?`,
+      `"${currentTrip.title}" seyahatini ve bağlı tüm verileri silmek istediğinizden emin misiniz?`,
       [
         { text: 'Vazgeç', style: 'cancel' },
         {
@@ -240,12 +292,8 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteTrip(trip.id);
-              if (onTripDeleted) {
-                onTripDeleted(trip.id);
-              } else if (onBack) {
-                onBack();
-              }
+              await deleteTrip(currentTrip.id);
+              if (onTripDeleted) onTripDeleted(currentTrip.id);
             } catch (err) {
               Alert.alert('Hata', 'Seyahat silinemedi.');
             }
@@ -255,12 +303,23 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
     );
   };
 
+  // Filtered Lists
+  const filteredPlaces = places.filter((p) => {
+    if (selectedPlaceCategory === 'Tümü') return true;
+    return (p.category || '').toLowerCase() === selectedPlaceCategory.toLowerCase();
+  });
+
+  const filteredExpenses = expenses.filter((e) => {
+    if (selectedExpenseCategory === 'Tümü') return true;
+    return (e.category || '').toLowerCase() === selectedExpenseCategory.toLowerCase();
+  });
+
   const handleFabPressIn = () => {
     Animated.spring(fabScale, {
-      toValue: 0.94,
+      toValue: 0.95,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
     }).start();
   };
 
@@ -268,23 +327,12 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
     Animated.spring(fabScale, {
       toValue: 1,
       useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
+      speed: 60,
+      bounciness: 3,
     }).start();
   };
 
-  // Filtered lists
-  const filteredPlaces = places.filter((p) => {
-    if (selectedPlaceCategory === 'Tümü') return true;
-    return p.category === selectedPlaceCategory;
-  });
-
-  const filteredExpenses = expenses.filter((e) => {
-    if (selectedExpenseCategory === 'Tümü') return true;
-    return e.category === selectedExpenseCategory;
-  });
-
-  const dateSpan = formatDateRange(trip.startDate, trip.endDate);
+  const dateSpan = formatDateRange(currentTrip.startDate, currentTrip.endDate);
   const statusBarPadding = Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12;
 
   return (
@@ -296,21 +344,21 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
           hitSlop={8}
           style={({ pressed }) => [
             styles.backButton,
-            pressed && { backgroundColor: '#E2E8F0' },
+            pressed && { backgroundColor: '#E4E4E7' },
           ]}
         >
-          <ArrowLeft size={20} color="#0F172A" strokeWidth={2.4} />
+          <ArrowLeft size={18} color="#09090B" strokeWidth={2.4} />
         </Pressable>
 
         <View style={styles.navTitleWrap}>
           <Text style={styles.navTitle} numberOfLines={1}>
-            {trip.title}
+            {currentTrip.title}
           </Text>
-          {trip.city ? (
+          {currentTrip.city ? (
             <View style={styles.navCityRow}>
-              <MapPin size={12} color="#0284C7" strokeWidth={2.2} />
+              <MapPin size={11} color="#71717A" strokeWidth={2} />
               <Text style={styles.navCityText} numberOfLines={1}>
-                {trip.city}
+                {currentTrip.city}
               </Text>
             </View>
           ) : null}
@@ -321,10 +369,10 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
           hitSlop={8}
           style={({ pressed }) => [
             styles.deleteTripBtn,
-            pressed && { backgroundColor: '#FFE4E6' },
+            pressed && { backgroundColor: '#FEE2E2' },
           ]}
         >
-          <Trash2 size={18} color="#94A3B8" strokeWidth={2} />
+          <Trash2 size={16} color="#A1A1AA" strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -335,27 +383,28 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#0284C7"
-            colors={['#0284C7']}
+            tintColor="#18181B"
+            colors={['#18181B']}
           />
         }
         contentContainerStyle={styles.scrollContainer}
         ListHeaderComponent={
           <View>
-            {/* Dates Card if available */}
+            {/* Dates banner if available */}
             {dateSpan ? (
               <View style={styles.dateBanner}>
-                <Calendar size={14} color="#0284C7" strokeWidth={2.2} />
+                <Calendar size={13} color="#71717A" strokeWidth={2} />
                 <Text style={styles.dateBannerText}>{dateSpan}</Text>
               </View>
             ) : null}
 
-            {/* Budget Progress Card */}
+            {/* Budget Progress Card with Edit Action */}
             <View style={styles.budgetSection}>
               <BudgetProgress
-                budget={trip.budget || 0}
+                budget={currentTrip.budget || 0}
                 totalSpent={stats.totalSpent}
-                currency={trip.currency || '₺'}
+                currency={currentTrip.currency || '₺'}
+                onEditBudget={handleOpenEditBudget}
               />
             </View>
 
@@ -369,8 +418,8 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                 ]}
               >
                 <Compass
-                  size={16}
-                  color={activeTab === 'places' ? '#0284C7' : '#64748B'}
+                  size={15}
+                  color={activeTab === 'places' ? '#FFFFFF' : '#71717A'}
                   strokeWidth={2.2}
                 />
                 <Text
@@ -406,8 +455,8 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                 ]}
               >
                 <Wallet
-                  size={16}
-                  color={activeTab === 'expenses' ? '#0284C7' : '#64748B'}
+                  size={15}
+                  color={activeTab === 'expenses' ? '#FFFFFF' : '#71717A'}
                   strokeWidth={2.2}
                 />
                 <Text
@@ -450,14 +499,14 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                         key={cat}
                         onPress={() => setSelectedPlaceCategory(cat)}
                         style={[
-                          styles.filterPill,
-                          isSelected && styles.filterPillActive,
+                          styles.filterChip,
+                          isSelected && styles.filterChipActive,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.filterPillText,
-                            isSelected && styles.filterPillTextActive,
+                            styles.filterChipText,
+                            isSelected && styles.filterChipTextActive,
                           ]}
                         >
                           {cat}
@@ -472,14 +521,14 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                         key={cat}
                         onPress={() => setSelectedExpenseCategory(cat)}
                         style={[
-                          styles.filterPill,
-                          isSelected && styles.filterPillActive,
+                          styles.filterChip,
+                          isSelected && styles.filterChipActive,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.filterPillText,
-                            isSelected && styles.filterPillTextActive,
+                            styles.filterChipText,
+                            isSelected && styles.filterChipTextActive,
                           ]}
                         >
                           {cat}
@@ -495,52 +544,38 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
             return (
               <PlaceCard
                 place={item}
-                onDelete={handleDeletePlace}
+                onDelete={() => handleDeletePlace(item.id)}
               />
             );
           }
           return (
             <ExpenseCard
               expense={item}
-              currency={trip.currency || '₺'}
-              onDelete={handleDeleteExpense}
+              currency={currentTrip.currency || '₺'}
+              onDelete={() => handleDeleteExpense(item.id)}
             />
           );
         }}
         ListEmptyComponent={
           !loading && (
-            <View style={styles.tabEmptyContainer}>
-              <View style={styles.tabEmptyIconWrap}>
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
                 {activeTab === 'places' ? (
-                  <Compass size={32} color="#0284C7" strokeWidth={1.8} />
+                  <Compass size={28} color="#71717A" strokeWidth={1.8} />
                 ) : (
-                  <CreditCard size={32} color="#0284C7" strokeWidth={1.8} />
+                  <CreditCard size={28} color="#71717A" strokeWidth={1.8} />
                 )}
               </View>
-              <Text style={styles.tabEmptyTitle}>
+              <Text style={styles.emptyTitle}>
                 {activeTab === 'places'
-                  ? selectedPlaceCategory !== 'Tümü'
-                    ? `Bu kategoride kayıtlı yer yok`
-                    : 'Henüz Gezilecek Yer Eklenmedi'
-                  : selectedExpenseCategory !== 'Tümü'
-                  ? `Bu kategoride harcama yok`
+                  ? 'Henüz Gezi Noktası Eklenmedi'
                   : 'Henüz Harcama Kaydı Yok'}
               </Text>
-              <Text style={styles.tabEmptySubtitle}>
+              <Text style={styles.emptySubtitle}>
                 {activeTab === 'places'
-                  ? 'Görmek istediğiniz plaj, müze veya restoranları ekleyin ve notlar alın.'
-                  : 'Seyahatiniz süresince yaptığınız harcamaları kaydederek bütçenizi kontrol edin.'}
+                  ? 'Ziyaret etmek istediğiniz plaj, müze veya kafeleri ekleyin.'
+                  : 'Konaklama, yeme-içme veya seyahat harcamalarınızı kaydedin.'}
               </Text>
-
-              <Pressable
-                onPress={activeTab === 'places' ? handleOpenAddPlace : handleOpenAddExpense}
-                style={styles.tabEmptyBtn}
-              >
-                <Plus size={16} color="#0284C7" strokeWidth={2.4} />
-                <Text style={styles.tabEmptyBtnText}>
-                  {activeTab === 'places' ? 'Ziyaret Yeri Ekle' : 'Harcama Ekle'}
-                </Text>
-              </Pressable>
             </View>
           )
         }
@@ -554,48 +589,132 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
           onPressOut={handleFabPressOut}
           style={styles.fabButton}
         >
-          <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={17} color="#FFFFFF" strokeWidth={2.4} />
           <Text style={styles.fabText}>
             {activeTab === 'places' ? 'Yer Ekle' : 'Harcama Ekle'}
           </Text>
         </Pressable>
       </Animated.View>
 
-      {/* Add Place Modal Sheet */}
+      {/* Edit Budget & Currency Modal */}
       <ModalSheet
-        visible={isPlaceModalVisible}
-        onClose={() => setIsPlaceModalVisible(false)}
-        title="Yeni Ziyaret Yeri Ekle"
-        subtitle="Rotanıza yeni bir durak ve seyahat notu ekleyin"
+        visible={isEditBudgetModalVisible}
+        onClose={() => setIsEditBudgetModalVisible(false)}
+        title="Bütçe & Para Birimini Düzenle"
+        subtitle="Bu seyahat için hedef bütçeyi ve geçerli para birimini güncelleyin"
       >
-        <View style={styles.modalForm}>
-          {placeError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{placeError}</Text>
+        <View style={styles.formContainer}>
+          {editBudgetError ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{editBudgetError}</Text>
             </View>
           ) : null}
 
-          {/* Place Name */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>
-              Yer / Mekan Adı <Text style={styles.star}>*</Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Wallet size={13} color="#71717A" strokeWidth={2} />
+              <Text style={styles.inputLabel}>Hedef Bütçe</Text>
+            </View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Örn: 35000"
+              placeholderTextColor="#A1A1AA"
+              keyboardType="numeric"
+              value={editBudgetAmount}
+              onChangeText={(text) => {
+                setEditBudgetAmount(text);
+                if (editBudgetError) setEditBudgetError('');
+              }}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Para Birimi</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.currencyScroll}
+            >
+              {WORLD_CURRENCIES.map((item) => {
+                const isSelected = editCurrency === item.symbol;
+                return (
+                  <Pressable
+                    key={item.code}
+                    onPress={() => setEditCurrency(item.symbol)}
+                    style={[
+                      styles.currencyChip,
+                      isSelected && styles.currencyChipSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.currencyChipText,
+                        isSelected && styles.currencyChipTextSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <View style={styles.modalButtonsRow}>
+            <Pressable
+              onPress={() => setIsEditBudgetModalVisible(false)}
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelButtonText}>Vazgeç</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleSaveBudget}
+              style={styles.saveButton}
+            >
+              <Text style={styles.saveButtonText}>Güncelle</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ModalSheet>
+
+      {/* Add Place Modal */}
+      <ModalSheet
+        visible={isPlaceModalVisible}
+        onClose={() => setIsPlaceModalVisible(false)}
+        title="Yeni Gezi Noktası Ekle"
+        subtitle="Ziyaret edeceğiniz yerleri ve rotanızı not edin"
+      >
+        <View style={styles.formContainer}>
+          {placeError ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{placeError}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Yer / Mekan Adı <Text style={styles.requiredStar}>*</Text>
             </Text>
             <TextInput
-              style={styles.formInput}
-              placeholder="Örn: Kaputaş Plajı veya Galata Kulesi"
-              placeholderTextColor="#94A3B8"
+              style={styles.textInput}
+              placeholder="Örn: Kaputaş Plajı, Antik Tiyatro"
+              placeholderTextColor="#A1A1AA"
               value={placeName}
-              onChangeText={(t) => {
-                setPlaceName(t);
+              onChangeText={(text) => {
+                setPlaceName(text);
                 if (placeError) setPlaceError('');
               }}
             />
           </View>
 
-          {/* Category Chips Selection */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Kategori</Text>
-            <View style={styles.categoryGrid}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Kategori</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryPillsScroll}
+            >
               {PLACE_CATEGORIES.map((cat) => {
                 const isSelected = placeCategory === cat;
                 return (
@@ -603,14 +722,14 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                     key={cat}
                     onPress={() => setPlaceCategory(cat)}
                     style={[
-                      styles.categoryChoiceChip,
-                      isSelected && styles.categoryChoiceChipSelected,
+                      styles.categoryPill,
+                      isSelected && styles.categoryPillSelected,
                     ]}
                   >
                     <Text
                       style={[
-                        styles.categoryChoiceText,
-                        isSelected && styles.categoryChoiceTextSelected,
+                        styles.categoryPillText,
+                        isSelected && styles.categoryPillTextSelected,
                       ]}
                     >
                       {cat}
@@ -618,16 +737,32 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
 
-          {/* Notes */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Seyahat Notları & İpuçları</Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Calendar size={13} color="#71717A" strokeWidth={2} />
+              <Text style={styles.inputLabel}>Ziyaret Tarihi</Text>
+            </View>
             <TextInput
-              style={[styles.formInput, styles.notesInput]}
-              placeholder="Örn: Sabah 09:00 öncesi gitmek sakin oluyor. Girişte müze kart geçerli."
-              placeholderTextColor="#94A3B8"
+              style={styles.textInput}
+              placeholder="YYYY-AA-GG"
+              placeholderTextColor="#A1A1AA"
+              value={placeDate}
+              onChangeText={setPlaceDate}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <FileText size={13} color="#71717A" strokeWidth={2} />
+              <Text style={styles.inputLabel}>Gezi Notları (İsteğe Bağlı)</Text>
+            </View>
+            <TextInput
+              style={[styles.textInput, styles.textAreaInput]}
+              placeholder="Giriş ücreti, en iyi saatler, yanına alman gerekenler..."
+              placeholderTextColor="#A1A1AA"
               multiline
               numberOfLines={3}
               value={placeNotes}
@@ -635,89 +770,81 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
             />
           </View>
 
-          {/* Date */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Ziyaret Tarihi</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="YYYY-AA-GG"
-              placeholderTextColor="#94A3B8"
-              value={placeDate}
-              onChangeText={setPlaceDate}
-            />
-          </View>
-
-          {/* Buttons */}
-          <View style={styles.modalActions}>
+          <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsPlaceModalVisible(false)}
-              style={styles.modalCancelBtn}
+              style={styles.cancelButton}
             >
-              <Text style={styles.modalCancelText}>Vazgeç</Text>
+              <Text style={styles.cancelButtonText}>Vazgeç</Text>
             </Pressable>
+
             <Pressable
               onPress={handleSavePlace}
-              style={styles.modalSaveBtn}
+              style={styles.saveButton}
             >
-              <Text style={styles.modalSaveText}>Yeri Kaydet</Text>
+              <Text style={styles.saveButtonText}>Yeri Kaydet</Text>
             </Pressable>
           </View>
         </View>
       </ModalSheet>
 
-      {/* Add Expense Modal Sheet */}
+      {/* Add Expense Modal */}
       <ModalSheet
         visible={isExpenseModalVisible}
         onClose={() => setIsExpenseModalVisible(false)}
-        title="Yeni Harcama Ekle"
-        subtitle="Bütçe takibiniz için harcama detayını kaydedin"
+        title="Yeni Harcama Kaydı"
+        subtitle="Bütçenizi kontrol etmek için seyahat giderlerinizi ekleyin"
       >
-        <View style={styles.modalForm}>
+        <View style={styles.formContainer}>
           {expenseError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{expenseError}</Text>
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{expenseError}</Text>
             </View>
           ) : null}
 
-          {/* Expense Title */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>
-              Harcama Başlığı <Text style={styles.star}>*</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Harcama Başlığı <Text style={styles.requiredStar}>*</Text>
             </Text>
             <TextInput
-              style={styles.formInput}
-              placeholder="Örn: Akşam Yemeği veya Tekne Turu"
-              placeholderTextColor="#94A3B8"
+              style={styles.textInput}
+              placeholder="Örn: Otel Konaklama, Akşam Yemeği"
+              placeholderTextColor="#A1A1AA"
               value={expenseTitle}
-              onChangeText={(t) => {
-                setExpenseTitle(t);
+              onChangeText={(text) => {
+                setExpenseTitle(text);
                 if (expenseError) setExpenseError('');
               }}
             />
           </View>
 
-          {/* Amount */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>
-              Tutar ({trip.currency || '₺'}) <Text style={styles.star}>*</Text>
-            </Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Wallet size={13} color="#71717A" strokeWidth={2} />
+              <Text style={styles.inputLabel}>
+                Tutar ({currentTrip.currency || '₺'}) <Text style={styles.requiredStar}>*</Text>
+              </Text>
+            </View>
             <TextInput
-              style={styles.formInput}
-              placeholder="Örn: 850"
-              placeholderTextColor="#94A3B8"
+              style={styles.textInput}
+              placeholder="Örn: 2400"
+              placeholderTextColor="#A1A1AA"
               keyboardType="numeric"
               value={expenseAmount}
-              onChangeText={(t) => {
-                setExpenseAmount(t);
+              onChangeText={(text) => {
+                setExpenseAmount(text);
                 if (expenseError) setExpenseError('');
               }}
             />
           </View>
 
-          {/* Category Chips Selection */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Harcama Kategorisi</Text>
-            <View style={styles.categoryGrid}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Harcama Kategorisi</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryPillsScroll}
+            >
               {EXPENSE_CATEGORIES.map((cat) => {
                 const isSelected = expenseCategory === cat;
                 return (
@@ -725,14 +852,14 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                     key={cat}
                     onPress={() => setExpenseCategory(cat)}
                     style={[
-                      styles.categoryChoiceChip,
-                      isSelected && styles.categoryChoiceChipSelected,
+                      styles.categoryPill,
+                      isSelected && styles.categoryPillSelected,
                     ]}
                   >
                     <Text
                       style={[
-                        styles.categoryChoiceText,
-                        isSelected && styles.categoryChoiceTextSelected,
+                        styles.categoryPillText,
+                        isSelected && styles.categoryPillTextSelected,
                       ]}
                     >
                       {cat}
@@ -740,34 +867,36 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
 
-          {/* Date */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Harcama Tarihi</Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Calendar size={13} color="#71717A" strokeWidth={2} />
+              <Text style={styles.inputLabel}>Harcama Tarihi</Text>
+            </View>
             <TextInput
-              style={styles.formInput}
+              style={styles.textInput}
               placeholder="YYYY-AA-GG"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#A1A1AA"
               value={expenseDate}
               onChangeText={setExpenseDate}
             />
           </View>
 
-          {/* Buttons */}
-          <View style={styles.modalActions}>
+          <View style={styles.modalButtonsRow}>
             <Pressable
               onPress={() => setIsExpenseModalVisible(false)}
-              style={styles.modalCancelBtn}
+              style={styles.cancelButton}
             >
-              <Text style={styles.modalCancelText}>Vazgeç</Text>
+              <Text style={styles.cancelButtonText}>Vazgeç</Text>
             </Pressable>
+
             <Pressable
               onPress={handleSaveExpense}
-              style={styles.modalSaveBtn}
+              style={styles.saveButton}
             >
-              <Text style={styles.modalSaveText}>Harcamayı Kaydet</Text>
+              <Text style={styles.saveButtonText}>Harcamayı Kaydet</Text>
             </Pressable>
           </View>
         </View>
@@ -779,87 +908,85 @@ export default function TripDetailScreen({ trip, onBack, onTripDeleted }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FAFAFA',
   },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E4E7',
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F4F4F5',
   },
   navTitleWrap: {
     flex: 1,
-    alignItems: 'center',
     marginHorizontal: 12,
   },
   navTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
+    letterSpacing: -0.2,
   },
   navCityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
+    marginTop: 1,
   },
   navCityText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#0284C7',
+    color: '#71717A',
+    fontWeight: '500',
   },
   deleteTripBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F4F4F5',
   },
   scrollContainer: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 90,
   },
   dateBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
     gap: 6,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
   },
   dateBannerText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0369A1',
+    color: '#52525B',
   },
   budgetSection: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   tabSwitcher: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 4,
+    backgroundColor: '#F4F4F5',
+    borderRadius: 12,
+    padding: 3,
     marginBottom: 12,
   },
   tabButton: {
@@ -867,236 +994,246 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 10,
-    borderRadius: 11,
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   tabButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    backgroundColor: '#18181B',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
     elevation: 2,
   },
   tabButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#71717A',
   },
   tabButtonTextActive: {
-    color: '#0F172A',
-    fontWeight: '700',
+    color: '#FFFFFF',
   },
   tabBadge: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#E4E4E7',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 999,
+    paddingVertical: 1,
+    borderRadius: 6,
   },
   tabBadgeActive: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#27272A',
   },
   tabBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: '#52525B',
   },
   tabBadgeTextActive: {
-    color: '#0284C7',
-  },
-  categoryFiltersContainer: {
-    paddingVertical: 4,
-    gap: 8,
-    marginBottom: 14,
-  },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterPillActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
-  },
-  filterPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterPillTextActive: {
     color: '#FFFFFF',
   },
-  tabEmptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 36,
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginTop: 4,
+  categoryFiltersContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 12,
   },
-  tabEmptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F0F9FF',
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  filterChipActive: {
+    backgroundColor: '#18181B',
+    borderColor: '#18181B',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#52525B',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    paddingVertical: 36,
+    paddingHorizontal: 20,
   },
-  tabEmptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  tabEmptySubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 18,
-  },
-  tabEmptyBtn: {
-    flexDirection: 'row',
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F4F4F5',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  tabEmptyBtnText: {
-    fontSize: 13,
+  emptyTitle: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0284C7',
+    color: '#09090B',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#71717A',
+    textAlign: 'center',
   },
   fabContainer: {
     position: 'absolute',
     bottom: 24,
-    right: 20,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    right: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   fabButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 999,
+    gap: 6,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
-  // Modal Forms
-  modalForm: {
-    gap: 16,
+  // Modal Form Styles
+  formContainer: {
+    gap: 14,
   },
-  errorBanner: {
-    backgroundColor: '#FFE4E6',
-    borderLeftWidth: 4,
-    borderLeftColor: '#E11D48',
-    padding: 10,
-    borderRadius: 8,
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    borderLeftWidth: 3,
+    borderLeftColor: '#DC2626',
+    padding: 8,
+    borderRadius: 6,
   },
-  errorBannerText: {
-    color: '#9F1239',
-    fontSize: 13,
+  errorText: {
+    color: '#991B1B',
+    fontSize: 12,
     fontWeight: '500',
   },
-  formGroup: {
-    gap: 6,
+  inputGroup: {
+    gap: 5,
   },
-  formLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  star: {
-    color: '#E11D48',
-  },
-  formInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  notesInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  categoryGrid: {
+  labelRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    gap: 5,
   },
-  categoryChoiceChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  categoryChoiceChipSelected: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
-  },
-  categoryChoiceText: {
+  inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#3F3F46',
   },
-  categoryChoiceTextSelected: {
+  requiredStar: {
+    color: '#DC2626',
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#09090B',
+  },
+  textAreaInput: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  categoryPillsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  categoryPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  categoryPillSelected: {
+    backgroundColor: '#18181B',
+    borderColor: '#18181B',
+  },
+  categoryPillText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#52525B',
+  },
+  categoryPillTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  currencyScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  currencyChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  currencyChipSelected: {
+    backgroundColor: '#18181B',
+    borderColor: '#18181B',
+  },
+  currencyChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#52525B',
+  },
+  currencyChipTextSelected: {
     color: '#FFFFFF',
   },
-  modalActions: {
+  modalButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
   },
-  modalCancelBtn: {
+  cancelButton: {
     flex: 1,
-    paddingVertical: 13,
+    paddingVertical: 11,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    backgroundColor: '#F4F4F5',
   },
-  modalCancelText: {
-    fontSize: 14,
+  cancelButtonText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#52525B',
   },
-  modalSaveBtn: {
+  saveButton: {
     flex: 2,
-    paddingVertical: 13,
+    paddingVertical: 11,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#0284C7',
+    borderRadius: 10,
+    backgroundColor: '#18181B',
   },
-  modalSaveText: {
-    fontSize: 14,
-    fontWeight: '700',
+  saveButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

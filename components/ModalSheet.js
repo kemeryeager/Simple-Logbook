@@ -6,10 +6,10 @@ import {
   StyleSheet,
   Pressable,
   Animated,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Dimensions,
+  Keyboard,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
@@ -23,8 +23,27 @@ export default function ModalSheet({
   children,
 }) {
   const [showModal, setShowModal] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT * 0.5)).current;
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT * 0.4)).current;
+
+  // Track keyboard appearance to lift the modal above it
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -32,13 +51,13 @@ export default function ModalSheet({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 220,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           damping: 24,
-          stiffness: 180,
+          stiffness: 220,
           useNativeDriver: true,
         }),
       ]).start();
@@ -46,39 +65,47 @@ export default function ModalSheet({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 180,
+          duration: 160,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: SCREEN_HEIGHT * 0.5,
-          duration: 200,
+          toValue: SCREEN_HEIGHT * 0.4,
+          duration: 180,
           useNativeDriver: true,
         }),
       ]).start(() => {
         setShowModal(false);
+        setKeyboardHeight(0);
       });
     }
   }, [visible]);
 
   const requestClose = () => {
+    Keyboard.dismiss();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 180,
+        duration: 160,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT * 0.5,
-        duration: 200,
+        toValue: SCREEN_HEIGHT * 0.4,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]).start(() => {
       setShowModal(false);
+      setKeyboardHeight(0);
       if (onClose) onClose();
     });
   };
 
   if (!showModal) return null;
+
+  const contentMaxHeight =
+    keyboardHeight > 0
+      ? Math.max(SCREEN_HEIGHT - keyboardHeight - 40, 240)
+      : SCREEN_HEIGHT * 0.86;
 
   return (
     <Modal
@@ -89,14 +116,14 @@ export default function ModalSheet({
       statusBarTranslucent
     >
       <View style={styles.modalRoot}>
-        {/* Animated Dimmed Backdrop */}
+        {/* Animated Backdrop */}
         <Animated.View
           style={[
             styles.backdrop,
             {
               opacity: fadeAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0, 0.45],
+                outputRange: [0, 0.4],
               }),
             },
           ]}
@@ -104,15 +131,20 @@ export default function ModalSheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} />
         </Animated.View>
 
-        {/* Sliding Bottom Sheet Container */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheetContainer}
+        {/* Bottom Sheet Container dynamically lifting with keyboard */}
+        <View
+          style={[
+            styles.sheetContainer,
+            {
+              paddingBottom: keyboardHeight > 0 ? keyboardHeight : (Platform.OS === 'ios' ? 24 : 12),
+            },
+          ]}
         >
           <Animated.View
             style={[
               styles.sheetContent,
               {
+                maxHeight: contentMaxHeight,
                 transform: [{ translateY: slideAnim }],
               },
             ]}
@@ -134,23 +166,27 @@ export default function ModalSheet({
                 hitSlop={10}
                 style={({ pressed }) => [
                   styles.closeButton,
-                  pressed && { backgroundColor: '#F1F5F9' },
+                  pressed && { backgroundColor: '#E4E4E7' },
                 ]}
               >
-                <X size={18} color="#64748B" strokeWidth={2.2} />
+                <X size={16} color="#71717A" strokeWidth={2.4} />
               </Pressable>
             </View>
 
             {/* Scrollable Children */}
             <ScrollView
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: keyboardHeight > 0 ? 36 : 24 },
+              ]}
               keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
+              automaticallyAdjustKeyboardInsets={true}
             >
               {children}
             </ScrollView>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
@@ -163,25 +199,22 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#09090B',
   },
   sheetContainer: {
     justifyContent: 'flex-end',
-    maxHeight: '90%',
   },
   sheetContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 20,
-    maxHeight: SCREEN_HEIGHT * 0.85,
+    borderColor: '#E4E4E7',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 24,
   },
   handleContainer: {
     alignItems: 'center',
@@ -189,10 +222,10 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   dragHandle: {
-    width: 38,
-    height: 4.5,
+    width: 36,
+    height: 4,
     borderRadius: 999,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#D4D4D8',
   },
   header: {
     flexDirection: 'row',
@@ -201,34 +234,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F4F4F5',
   },
   headerTextCol: {
     flex: 1,
     marginRight: 12,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: -0.2,
+    color: '#09090B',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#71717A',
     marginTop: 2,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 20,
   },
 });

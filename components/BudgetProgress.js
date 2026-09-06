@@ -1,10 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { Wallet, AlertCircle, CheckCircle2 } from 'lucide-react-native';
+import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { Wallet, AlertCircle, CheckCircle2, Pencil } from 'lucide-react-native';
 
 export const formatCurrency = (amount, currency = '₺') => {
   const num = Number(amount) || 0;
-  return `${num.toLocaleString('tr-TR')} ${currency}`;
+  // Format with thousand separator
+  const formatted = num.toLocaleString('tr-TR');
+  // Position currency symbol cleanly
+  return `${formatted} ${currency}`;
 };
 
 export default function BudgetProgress({
@@ -12,6 +15,7 @@ export default function BudgetProgress({
   totalSpent = 0,
   currency = '₺',
   compact = false,
+  onEditBudget,
   style,
 }) {
   const safeBudget = Number(budget) || 0;
@@ -20,24 +24,23 @@ export default function BudgetProgress({
   const percent = safeBudget > 0 ? Math.round((safeSpent / safeBudget) * 100) : 0;
   const clampedPercent = Math.min(Math.max(percent, 0), 100);
 
-  // Animated width percentage
   const animatedWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(animatedWidth, {
       toValue: clampedPercent,
-      duration: 650,
-      useNativeDriver: false, // width percentage requires JS layout driver
+      duration: 500,
+      useNativeDriver: false,
     }).start();
   }, [clampedPercent]);
 
-  // Color selection based on budget consumption
   const isOver = safeBudget > 0 && safeSpent > safeBudget;
   const isWarning = safeBudget > 0 && percent >= 80 && !isOver;
 
-  const barColor = isOver ? '#E11D48' : isWarning ? '#D97706' : '#0284C7';
-  const badgeBg = isOver ? '#FFE4E6' : isWarning ? '#FEF3C7' : '#E0F2FE';
-  const badgeTextColor = isOver ? '#9F1239' : isWarning ? '#92400E' : '#0369A1';
+  // Modern, refined color scheme
+  const barColor = isOver ? '#E11D48' : isWarning ? '#D97706' : '#18181B';
+  const badgeBg = isOver ? '#FFE4E6' : isWarning ? '#FEF3C7' : '#F4F4F5';
+  const badgeTextColor = isOver ? '#9F1239' : isWarning ? '#92400E' : '#27272A';
 
   const widthInterpolate = animatedWidth.interpolate({
     inputRange: [0, 100],
@@ -79,20 +82,36 @@ export default function BudgetProgress({
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
           <View style={styles.iconCircle}>
-            <Wallet size={18} color="#0284C7" strokeWidth={2.2} />
+            <Wallet size={16} color="#18181B" strokeWidth={2} />
           </View>
           <Text style={styles.cardTitle}>Bütçe Durumu</Text>
         </View>
 
-        <View style={[styles.badgePill, { backgroundColor: badgeBg }]}>
-          {isOver ? (
-            <AlertCircle size={13} color={badgeTextColor} style={{ marginRight: 4 }} />
-          ) : (
-            <CheckCircle2 size={13} color={badgeTextColor} style={{ marginRight: 4 }} />
+        <View style={styles.headerRightActions}>
+          <View style={[styles.badgePill, { backgroundColor: badgeBg }]}>
+            {isOver ? (
+              <AlertCircle size={12} color={badgeTextColor} style={{ marginRight: 4 }} />
+            ) : (
+              <CheckCircle2 size={12} color={badgeTextColor} style={{ marginRight: 4 }} />
+            )}
+            <Text style={[styles.badgeText, { color: badgeTextColor }]}>
+              {isOver ? `Bütçe Aşıldı (%${percent})` : `%${percent} Harcandı`}
+            </Text>
+          </View>
+
+          {onEditBudget && (
+            <Pressable
+              onPress={onEditBudget}
+              style={({ pressed }) => [
+                styles.editBudgetBtn,
+                pressed && { backgroundColor: '#E4E4E7' },
+              ]}
+              hitSlop={8}
+            >
+              <Pencil size={13} color="#52525B" strokeWidth={2.2} />
+              <Text style={styles.editBudgetBtnText}>Düzenle</Text>
+            </Pressable>
           )}
-          <Text style={[styles.badgeText, { color: badgeTextColor }]}>
-            {isOver ? `Bütçe Aşıldı (%${percent})` : `%${percent} Harcandı`}
-          </Text>
         </View>
       </View>
 
@@ -112,7 +131,7 @@ export default function BudgetProgress({
       {/* Stats Breakdown Grid */}
       <View style={styles.statsGrid}>
         <View style={styles.statColumn}>
-          <Text style={styles.statLabel}>Toplam Bütçe</Text>
+          <Text style={styles.statLabel}>Hedef Bütçe</Text>
           <Text style={styles.statValueBold}>{formatCurrency(safeBudget, currency)}</Text>
         </View>
 
@@ -120,7 +139,7 @@ export default function BudgetProgress({
 
         <View style={styles.statColumn}>
           <Text style={styles.statLabel}>Harcanan</Text>
-          <Text style={[styles.statValueBold, { color: barColor }]}>
+          <Text style={[styles.statValueBold, { color: isOver ? '#E11D48' : '#09090B' }]}>
             {formatCurrency(safeSpent, currency)}
           </Text>
         </View>
@@ -128,11 +147,11 @@ export default function BudgetProgress({
         <View style={styles.statDivider} />
 
         <View style={styles.statColumn}>
-          <Text style={styles.statLabel}>{isOver ? 'Aşım Tutarı' : 'Kalan'}</Text>
+          <Text style={styles.statLabel}>{isOver ? 'Aşım' : 'Kalan'}</Text>
           <Text
             style={[
               styles.statValueBold,
-              { color: isOver ? '#E11D48' : '#059669' },
+              { color: isOver ? '#E11D48' : '#15803D' },
             ]}
           >
             {formatCurrency(Math.abs(remaining), currency)}
@@ -157,16 +176,16 @@ const styles = StyleSheet.create({
   compactSpentText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
   },
   compactBudgetText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#71717A',
   },
   compactTrack: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
+    height: 5,
+    backgroundColor: '#F4F4F5',
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -178,21 +197,21 @@ const styles = StyleSheet.create({
   // Full Card Styles
   fullCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
+    borderColor: '#E4E4E7',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   titleRow: {
     flexDirection: 'row',
@@ -200,36 +219,55 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#F0F9FF',
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
+    letterSpacing: -0.2,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editBudgetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F4F4F5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  editBudgetBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#52525B',
   },
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 8,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontWeight: '600',
   },
   progressTrack: {
-    height: 10,
-    backgroundColor: '#F1F5F9',
+    height: 8,
+    backgroundColor: '#F4F4F5',
     borderRadius: 999,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   progressBar: {
     height: '100%',
@@ -239,10 +277,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F4F4F5',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   statColumn: {
     flex: 1,
@@ -250,18 +290,18 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: 28,
-    backgroundColor: '#E2E8F0',
+    height: 24,
+    backgroundColor: '#E4E4E7',
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: '#71717A',
     fontWeight: '500',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   statValueBold: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#09090B',
   },
 });
