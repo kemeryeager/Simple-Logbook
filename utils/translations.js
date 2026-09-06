@@ -172,6 +172,18 @@ export const translations = {
     modal_edit_budget_title: 'Bütçe & Para Birimini Düzenle',
     budget_exceeded_badge: 'Bütçe Aşıldı (%{percent})',
     budget_spent_badge: '%{percent} Harcandı',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'Rehberden Keşfet',
+    explore_guide: 'Rehberden Keşfet',
+    explore_places_subtitle: 'Popüler yerleri inceleyin ve tek dokunuşla rotanıza ekleyin',
+    add_to_route: 'Rotama Ekle',
+    added_to_route: 'Eklendi',
+    search_destination_placeholder: 'Şehir, ülke veya yer ara...',
+    suggested_places_for: '{city} için Önerilen Yerler',
+    no_guide_results: 'Eşleşen şehir veya yer bulunamadı',
+    curated_places_count: '{count} popüler nokta',
+    popular_cities_badge: 'Popüler Şehirler',
   },
 
   // ==========================================
@@ -298,6 +310,18 @@ export const translations = {
     modal_edit_budget_title: 'Edit Budget & Currency',
     budget_exceeded_badge: 'Over Budget ({percent}%)',
     budget_spent_badge: '{percent}% Spent',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'Explore Guide',
+    explore_guide: 'Explore Guide',
+    explore_places_subtitle: 'Discover popular attractions and add them to your itinerary',
+    add_to_route: 'Add to Route',
+    added_to_route: 'Added',
+    search_destination_placeholder: 'Search city, country or place...',
+    suggested_places_for: 'Popular Attractions in {city}',
+    no_guide_results: 'No matching destination found',
+    curated_places_count: '{count} popular spots',
+    popular_cities_badge: 'Popular Cities',
   },
 
   // ==========================================
@@ -424,6 +448,18 @@ export const translations = {
     modal_edit_budget_title: 'Editar presupuesto y moneda',
     budget_exceeded_badge: 'Presupuesto excedido ({percent}%)',
     budget_spent_badge: '{percent}% gastado',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'Explorar Guía',
+    explore_guide: 'Explorar Guía',
+    explore_places_subtitle: 'Descubre atracciones populares y agrégalas a tu itinerario',
+    add_to_route: 'Añadir a la Ruta',
+    added_to_route: 'Añadido',
+    search_destination_placeholder: 'Buscar ciudad, país o lugar...',
+    suggested_places_for: 'Atracciones Populares en {city}',
+    no_guide_results: 'No se encontraron destinos coincidentes',
+    curated_places_count: '{count} lugares populares',
+    popular_cities_badge: 'Ciudades Populares',
   },
 
   // ==========================================
@@ -550,6 +586,18 @@ export const translations = {
     modal_edit_budget_title: 'Budget & Währung bearbeiten',
     budget_exceeded_badge: 'Budget überschritten ({percent}%)',
     budget_spent_badge: '{percent}% ausgegeben',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'Reiseführer erkunden',
+    explore_guide: 'Reiseführer erkunden',
+    explore_places_subtitle: 'Entdecken Sie beliebte Sehenswürdigkeiten und fügen Sie sie hinzu',
+    add_to_route: 'Zur Route hinzufügen',
+    added_to_route: 'Hinzugefügt',
+    search_destination_placeholder: 'Stadt, Land oder Ort suchen...',
+    suggested_places_for: 'Beliebte Sehenswürdigkeiten in {city}',
+    no_guide_results: 'Kein passendes Reiseziel gefunden',
+    curated_places_count: '{count} beliebte Orte',
+    popular_cities_badge: 'Beliebte Städte',
   },
 
   // ==========================================
@@ -676,6 +724,18 @@ export const translations = {
     modal_edit_budget_title: 'Modifier le budget & la devise',
     budget_exceeded_badge: 'Budget dépassé ({percent} %)',
     budget_spent_badge: '{percent} % dépensé',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'Explorer le guide',
+    explore_guide: 'Explorer le guide',
+    explore_places_subtitle: 'Découvrez des attractions populaires et ajoutez-les à votre itinéraire',
+    add_to_route: 'Ajouter à l\'itinéraire',
+    added_to_route: 'Ajouté',
+    search_destination_placeholder: 'Rechercher une ville, un pays ou un lieu...',
+    suggested_places_for: 'Attractions populaires à {city}',
+    no_guide_results: 'Aucune destination correspondante trouvée',
+    curated_places_count: '{count} lieux populaires',
+    popular_cities_badge: 'Villes Populaires',
   },
 
   // ==========================================
@@ -802,6 +862,18 @@ export const translations = {
     modal_edit_budget_title: '予算と通貨を編集',
     budget_exceeded_badge: '予算超過 ({percent}%)',
     budget_spent_badge: '{percent}% 消化',
+
+    // Destination Guide & Autocomplete
+    explore_places: 'ガイドを見る',
+    explore_guide: 'ガイドを見る',
+    explore_places_subtitle: '人気スポットを見つけて旅程に追加しましょう',
+    add_to_route: 'ルートに追加',
+    added_to_route: '追加済み',
+    search_destination_placeholder: '都市、国、または場所を検索...',
+    suggested_places_for: '{city} の人気スポット',
+    no_guide_results: '一致する旅行先が見つかりませんでした',
+    curated_places_count: '{count} 件の人気スポット',
+    popular_cities_badge: '人気の都市',
   },
 };
 
@@ -863,7 +935,7 @@ export const translatePlaceCategory = (categoryOrKey, lang = 'tr') => {
   if (raw.includes('doğa') || raw.includes('plaj') || raw.includes('nature') || raw.includes('beach')) {
     return t('place_cat_nature', lang);
   }
-  if (raw.includes('tarih') || raw.includes('historic')) {
+  if (raw.includes('tarih') || raw.includes('histor')) {
     return t('place_cat_history', lang);
   }
   if (raw.includes('müze') || raw.includes('kültür') || raw.includes('museum') || raw.includes('culture')) {

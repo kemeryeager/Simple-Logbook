@@ -28,6 +28,7 @@ import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
 import SettingsModal from '../components/SettingsModal';
 import DatePickerModal from '../components/DatePickerModal';
+import CityAutocompleteInput from '../components/CityAutocompleteInput';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
@@ -416,26 +417,19 @@ export default function TripListScreen({ onSelectTrip }) {
           </View>
 
           {/* City / Destination */}
-          <View style={styles.inputGroup}>
+          <View style={[styles.inputGroup, Platform.OS === 'ios' && { zIndex: 10 }]}>
             <View style={styles.labelRow}>
               <MapPin size={13} color={theme.textMuted} strokeWidth={2} />
               <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
                 {t('destination_city')}
               </Text>
             </View>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: theme.inputBg,
-                  borderColor: theme.border,
-                  color: theme.textPrimary,
-                },
-              ]}
-              placeholder={t('placeholder_city')}
-              placeholderTextColor={theme.textMuted}
+            <CityAutocompleteInput
               value={city}
               onChangeText={setCity}
+              placeholder={t('placeholder_city')}
+              theme={theme}
+              t={t}
             />
           </View>
 
