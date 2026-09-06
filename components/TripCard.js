@@ -69,11 +69,13 @@ function TripCard({
             <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={1}>
               {trip.title}
             </Text>
-            {trip.city ? (
+            {(trip.city || trip.country) ? (
               <View style={styles.cityRow}>
                 <MapPin size={12} color={theme.textMuted} strokeWidth={2} />
                 <Text style={[styles.cityText, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {trip.city}
+                  {trip.city ? trip.city : ''}
+                  {trip.city && trip.country ? ' • ' : ''}
+                  {trip.country ? `${trip.country}` : ''}
                 </Text>
               </View>
             ) : null}

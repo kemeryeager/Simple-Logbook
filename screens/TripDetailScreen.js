@@ -436,11 +436,13 @@ export default function TripDetailScreen({
           <Text style={[styles.navTitle, { color: theme.textPrimary }]} numberOfLines={1}>
             {currentTrip.title}
           </Text>
-          {currentTrip.city ? (
+          {(currentTrip.city || currentTrip.country) ? (
             <View style={styles.navCityRow}>
               <MapPin size={11} color={theme.textMuted} strokeWidth={2} />
               <Text style={[styles.navCityText, { color: theme.textMuted }]} numberOfLines={1}>
-                {currentTrip.city}
+                {currentTrip.city ? currentTrip.city : ''}
+                {currentTrip.city && currentTrip.country ? ' • ' : ''}
+                {currentTrip.country ? currentTrip.country : ''}
               </Text>
             </View>
           ) : null}

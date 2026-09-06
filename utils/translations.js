@@ -52,6 +52,17 @@ export const translations = {
   // TÜRKÇE (tr) - Default
   // ==========================================
   tr: {
+    country: "Gidilecek Ülke",
+    select_country: "Ülke Seçin",
+    select_country_subtitle: "Seyahatinizin gerçekleşeceği ülkeyi belirleyin",
+    search_country: "Ülke ara (örn: Türkiye, İtalya)...",
+    popular_countries: "Popüler Ülkeler",
+    select_city: "Şehir Seçin",
+    select_city_subtitle: "Rotanızı belirleyecek şehri seçin",
+    search_city: "Şehir veya ilçe ara...",
+    popular_cities: "Popüler Turistik Şehirler",
+    select_country_first: "Önce yukarıdan ülke seçin",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: 'Gezi & Seyahat Not Defteri',
@@ -190,6 +201,17 @@ export const translations = {
   // ENGLISH (en)
   // ==========================================
   en: {
+    country: "Destination Country",
+    select_country: "Select Country",
+    select_country_subtitle: "Choose the country for your journey",
+    search_country: "Search country (e.g. Italy, Japan)...",
+    popular_countries: "Popular Countries",
+    select_city: "Select City",
+    select_city_subtitle: "Choose the city for your itinerary",
+    search_city: "Search city or district...",
+    popular_cities: "Popular Tourist Cities",
+    select_country_first: "Select a country first",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: 'Travel & Route Diary',
@@ -328,6 +350,17 @@ export const translations = {
   // ESPAÑOL (es)
   // ==========================================
   es: {
+    country: "País de Destino",
+    select_country: "Seleccionar País",
+    select_country_subtitle: "Elige el país para tu viaje",
+    search_country: "Buscar país (ej: España, Francia)...",
+    popular_countries: "Países Populares",
+    select_city: "Seleccionar Ciudad",
+    select_city_subtitle: "Elige la ciudad para tu itinerario",
+    search_city: "Buscar ciudad o distrito...",
+    popular_cities: "Ciudades Turísticas Populares",
+    select_country_first: "Primero selecciona un país",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: 'Cuaderno de Viajes y Rutas',
@@ -466,6 +499,17 @@ export const translations = {
   // DEUTSCH (de)
   // ==========================================
   de: {
+    country: "Zielland",
+    select_country: "Land auswählen",
+    select_country_subtitle: "Wählen Sie das Land für Ihre Reise",
+    search_country: "Land suchen (z. B. Deutschland, Italien)...",
+    popular_countries: "Beliebte Länder",
+    select_city: "Stadt auswählen",
+    select_city_subtitle: "Wählen Sie die Stadt für Ihre Reiseroute",
+    search_city: "Stadt oder Bezirk suchen...",
+    popular_cities: "Beliebte Touristenstädte",
+    select_country_first: "Wählen Sie zuerst ein Land aus",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: 'Reise- & Routentagebuch',
@@ -604,6 +648,17 @@ export const translations = {
   // FRANÇAIS (fr)
   // ==========================================
   fr: {
+    country: "Pays de destination",
+    select_country: "Sélectionner un pays",
+    select_country_subtitle: "Choisissez le pays de votre voyage",
+    search_country: "Rechercher un pays (ex : France, Italie)...",
+    popular_countries: "Pays populaires",
+    select_city: "Sélectionner une ville",
+    select_city_subtitle: "Choisissez la ville pour votre itinéraire",
+    search_city: "Rechercher une ville ou un district...",
+    popular_cities: "Villes touristiques populaires",
+    select_country_first: "Sélectionnez d'abord un pays",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: "Carnet de Voyage & d'Itinéraires",
@@ -742,6 +797,17 @@ export const translations = {
   // 日本語 (ja)
   // ==========================================
   ja: {
+    country: "目的国",
+    select_country: "国を選択",
+    select_country_subtitle: "旅行する国を選択してください",
+    search_country: "国を検索（例：日本、イタリア）...",
+    popular_countries: "人気の国",
+    select_city: "都市を選択",
+    select_city_subtitle: "旅程の都市を選択してください",
+    search_city: "都市または地域を検索...",
+    popular_cities: "人気の観光都市",
+    select_country_first: "最初に国を選択してください",
+
     // App Branding
     app_name: 'Simple Logbook',
     app_tagline: '旅行＆ルートノート',

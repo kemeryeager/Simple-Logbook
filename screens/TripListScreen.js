@@ -22,12 +22,16 @@ import {
   Calendar,
   Wallet,
   Settings,
+  Globe,
+  ChevronDown,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
 import SettingsModal from '../components/SettingsModal';
 import DatePickerModal from '../components/DatePickerModal';
+import CountryPickerModal from '../components/CountryPickerModal';
+import CityPickerModal from '../components/CityPickerModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
@@ -46,12 +50,17 @@ export default function TripListScreen({ onSelectTrip }) {
   // Add Trip Modal State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [title, setTitle] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(null); // { code, name, flag }
   const [city, setCity] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState('₺');
   const [formError, setFormError] = useState('');
+
+  // Country & City Picker Modals
+  const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
+  const [isCityPickerOpen, setIsCityPickerOpen] = useState(false);
 
   // Date Picker State ('start' | 'end' | null)
   const [datePickerTarget, setDatePickerTarget] = useState(null);
@@ -97,6 +106,7 @@ export default function TripListScreen({ onSelectTrip }) {
     const nextWeekStr = nextWeek.toISOString().split('T')[0];
 
     setTitle('');
+    setSelectedCountry(null);
     setCity('');
     setStartDate(todayStr);
     setEndDate(nextWeekStr);
@@ -115,6 +125,8 @@ export default function TripListScreen({ onSelectTrip }) {
     try {
       const newTripData = {
         title: title.trim(),
+        country: selectedCountry?.name || '',
+        countryCode: selectedCountry?.code || '',
         city: city.trim(),
         startDate: startDate.trim(),
         endDate: endDate.trim(),
@@ -415,7 +427,44 @@ export default function TripListScreen({ onSelectTrip }) {
             />
           </View>
 
-          {/* City / Destination */}
+          {/* Step 1: Country Picker */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Globe size={13} color={theme.textMuted} strokeWidth={2} />
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
+                {t('country', 'Gidilecek Ülke')} <Text style={styles.requiredStar}>*</Text>
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setIsCountryPickerOpen(true)}
+              style={({ pressed }) => [
+                styles.selectorButton,
+                {
+                  backgroundColor: theme.inputBg,
+                  borderColor: theme.border,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <View style={styles.selectorLeft}>
+                {selectedCountry ? (
+                  <>
+                    <Text style={styles.selectorFlag}>{selectedCountry.flag}</Text>
+                    <Text style={[styles.selectorText, { color: theme.textPrimary }]}>
+                      {selectedCountry.name}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={[styles.selectorText, { color: theme.textMuted }]}>
+                    {t('select_country', 'Önce Ülke Seçin...')}
+                  </Text>
+                )}
+              </View>
+              <ChevronDown size={15} color={theme.textMuted} strokeWidth={2} />
+            </Pressable>
+          </View>
+
+          {/* Step 2: City Picker (Scoped strictly to selected country) */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <MapPin size={13} color={theme.textMuted} strokeWidth={2} />
@@ -423,20 +472,39 @@ export default function TripListScreen({ onSelectTrip }) {
                 {t('destination_city')}
               </Text>
             </View>
-            <TextInput
-              style={[
-                styles.textInput,
+            <Pressable
+              onPress={() => {
+                if (selectedCountry) {
+                  setIsCityPickerOpen(true);
+                } else {
+                  setIsCountryPickerOpen(true);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.selectorButton,
                 {
-                  backgroundColor: theme.inputBg,
+                  backgroundColor: selectedCountry ? theme.inputBg : theme.btnSecondaryBg,
                   borderColor: theme.border,
-                  color: theme.textPrimary,
+                  opacity: selectedCountry ? 1 : 0.65,
                 },
+                pressed && selectedCountry && { opacity: 0.8 },
               ]}
-              placeholder={t('placeholder_city')}
-              placeholderTextColor={theme.textMuted}
-              value={city}
-              onChangeText={setCity}
-            />
+            >
+              <View style={styles.selectorLeft}>
+                {city ? (
+                  <Text style={[styles.selectorText, { color: theme.textPrimary }]}>
+                    {city}
+                  </Text>
+                ) : (
+                  <Text style={[styles.selectorText, { color: theme.textMuted }]}>
+                    {selectedCountry
+                      ? `${selectedCountry.name} içinde şehir seçin...`
+                      : t('select_country_first', 'Önce yukarıdan ülke seçin')}
+                  </Text>
+                )}
+              </View>
+              <ChevronDown size={15} color={theme.textMuted} strokeWidth={2} />
+            </Pressable>
           </View>
 
           {/* Dates Row */}
@@ -605,6 +673,33 @@ export default function TripListScreen({ onSelectTrip }) {
             setEndDate(selected);
           }
         }}
+      />
+
+      {/* Country Picker Modal */}
+      <CountryPickerModal
+        visible={isCountryPickerOpen}
+        onClose={() => setIsCountryPickerOpen(false)}
+        selectedCountryCode={selectedCountry?.code || ''}
+        onSelectCountry={(country) => {
+          setSelectedCountry(country);
+          // If country changed, reset city so user picks a city in the new country
+          setCity('');
+        }}
+        theme={theme}
+        t={t}
+      />
+
+      {/* City Picker Modal (Filtered strictly to selectedCountry) */}
+      <CityPickerModal
+        visible={isCityPickerOpen}
+        onClose={() => setIsCityPickerOpen(false)}
+        country={selectedCountry}
+        selectedCity={city}
+        onSelectCity={(cityName) => {
+          setCity(cityName);
+        }}
+        theme={theme}
+        t={t}
       />
     </View>
   );
@@ -815,6 +910,28 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  selectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  selectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  selectorFlag: {
+    fontSize: 16,
+  },
+  selectorText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   dateSelectBtnText: {
     fontSize: 13,

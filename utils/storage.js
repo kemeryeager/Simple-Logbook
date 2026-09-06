@@ -367,6 +367,8 @@ export const saveTrip = async (trip) => {
       ...trip,
       id,
       title: String(trip.title !== undefined ? trip.title : (existing.title || '')).trim(),
+      country: String(trip.country !== undefined ? trip.country : (existing.country || '')).trim(),
+      countryCode: String(trip.countryCode !== undefined ? trip.countryCode : (existing.countryCode || '')).trim().toUpperCase(),
       city: String(trip.city !== undefined ? trip.city : (existing.city || '')).trim(),
       startDate: trip.startDate !== undefined ? trip.startDate : (existing.startDate || ''),
       endDate: trip.endDate !== undefined ? trip.endDate : (existing.endDate || ''),
