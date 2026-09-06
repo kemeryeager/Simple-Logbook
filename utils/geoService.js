@@ -174,8 +174,8 @@ export async function searchCitiesInCountryOSM(cityName, countryCode, limit = 8)
       return JSON.parse(cached);
     }
 
-    // 2. Query OSM Nominatim strictly for this country
-    const url = `${NOMINATIM_BASE}?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=${cCode}&featuretype=city&limit=${limit}&addressdetails=1`;
+    // 2. Query OSM Nominatim strictly for this country without restrictive featuretype
+    const url = `${NOMINATIM_BASE}?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=${cCode}&limit=${limit}&addressdetails=1`;
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'SimpleLogbookApp/1.1.0 (contact: info@simplelogbook.app)',

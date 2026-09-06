@@ -46,6 +46,7 @@ export default function CountryPickerModal({
       title={t('select_country', 'Ülke Seçin')}
       subtitle={t('select_country_subtitle', 'Seyahatinizin gerçekleşeceği ülkeyi belirleyin')}
       theme={theme}
+      scrollable={false}
     >
       <View style={styles.container}>
         {/* Search Bar */}

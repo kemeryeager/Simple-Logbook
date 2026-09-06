@@ -464,12 +464,12 @@ export default function TripListScreen({ onSelectTrip }) {
             </Pressable>
           </View>
 
-          {/* Step 2: City Picker (Scoped strictly to selected country) */}
+          {/* Step 2: City / District Picker (Scoped strictly to selected country) */}
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <MapPin size={13} color={theme.textMuted} strokeWidth={2} />
               <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
-                {t('destination_city')}
+                {t('destination_city_district', 'Şehir / İlçe')}
               </Text>
             </View>
             <Pressable

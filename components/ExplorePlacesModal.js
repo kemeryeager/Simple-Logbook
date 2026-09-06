@@ -76,11 +76,11 @@ export default function ExplorePlacesModal({
     }
   };
 
-  const loadPlacesForCategory = async (lat, lon, cat) => {
+  const loadPlacesForCategory = async (lat, lon, cat, query = '') => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const fetched = await fetchLivePlaces(lat, lon, cat);
+      const fetched = await fetchLivePlaces(lat, lon, cat, 4000, query, 5);
       setPlaces(fetched);
     } catch (err) {
       setErrorMsg(t('no_guide_results', 'Canlı harita verisi alınamadı.'));
@@ -93,24 +93,29 @@ export default function ExplorePlacesModal({
   const handleCategoryPress = (catId) => {
     setActiveCategory(catId);
     if (cityCoords) {
-      loadPlacesForCategory(cityCoords.lat, cityCoords.lon, catId);
+      loadPlacesForCategory(cityCoords.lat, cityCoords.lon, catId, searchQuery);
     }
   };
 
   const handleSearchCityOrPlaces = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      if (cityCoords) {
+        loadPlacesForCategory(cityCoords.lat, cityCoords.lon, activeCategory, '');
+      }
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
-      // First attempt to geocode as a city
-      const coords = await geocodeCity(searchQuery.trim());
-      if (coords) {
-        setCityCoords(coords);
-        await loadPlacesForCategory(coords.lat, coords.lon, activeCategory);
-      } else if (cityCoords) {
-        // If not a new city, filter locally loaded places
-        // or re-fetch around current coords
-        await loadPlacesForCategory(cityCoords.lat, cityCoords.lon, activeCategory);
+      // First attempt to query places in current city matching search
+      if (cityCoords) {
+        await loadPlacesForCategory(cityCoords.lat, cityCoords.lon, activeCategory, searchQuery.trim());
+      } else {
+        const coords = await geocodeCity(searchQuery.trim());
+        if (coords) {
+          setCityCoords(coords);
+          await loadPlacesForCategory(coords.lat, coords.lon, activeCategory, '');
+        }
       }
     } catch (e) {
       setErrorMsg(t('no_guide_results', 'Arama sonuçları alınamadı.'));
@@ -170,6 +175,7 @@ export default function ExplorePlacesModal({
       title={t('explore_places', 'Rehberden Keşfet')}
       subtitle={cityCoords?.city ? `${cityCoords.city}, ${cityCoords.country}` : t('explore_places_subtitle')}
       theme={theme}
+      scrollable={false}
     >
       <View style={styles.container}>
         {/* Search Bar */}

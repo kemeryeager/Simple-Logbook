@@ -52,6 +52,8 @@ export const translations = {
   // TÜRKÇE (tr) - Default
   // ==========================================
   tr: {
+    destination_city_district: "Şehir / İlçe",
+
     country: "Gidilecek Ülke",
     select_country: "Ülke Seçin",
     select_country_subtitle: "Seyahatinizin gerçekleşeceği ülkeyi belirleyin",
@@ -201,6 +203,8 @@ export const translations = {
   // ENGLISH (en)
   // ==========================================
   en: {
+    destination_city_district: "City / District",
+
     country: "Destination Country",
     select_country: "Select Country",
     select_country_subtitle: "Choose the country for your journey",
@@ -350,6 +354,8 @@ export const translations = {
   // ESPAÑOL (es)
   // ==========================================
   es: {
+    destination_city_district: "Ciudad / Distrito",
+
     country: "País de Destino",
     select_country: "Seleccionar País",
     select_country_subtitle: "Elige el país para tu viaje",
@@ -499,6 +505,8 @@ export const translations = {
   // DEUTSCH (de)
   // ==========================================
   de: {
+    destination_city_district: "Stadt / Bezirk",
+
     country: "Zielland",
     select_country: "Land auswählen",
     select_country_subtitle: "Wählen Sie das Land für Ihre Reise",
@@ -648,6 +656,8 @@ export const translations = {
   // FRANÇAIS (fr)
   // ==========================================
   fr: {
+    destination_city_district: "Ville / District",
+
     country: "Pays de destination",
     select_country: "Sélectionner un pays",
     select_country_subtitle: "Choisissez le pays de votre voyage",
@@ -797,6 +807,8 @@ export const translations = {
   // 日本語 (ja)
   // ==========================================
   ja: {
+    destination_city_district: "都市 / 地区",
+
     country: "目的国",
     select_country: "国を選択",
     select_country_subtitle: "旅行する国を選択してください",

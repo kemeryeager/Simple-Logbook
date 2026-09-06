@@ -71,9 +71,10 @@ export default function CityPickerModal({
     <ModalSheet
       visible={visible}
       onClose={onClose}
-      title={country ? `${country.flag} ${t('select_city', 'Şehir Seçin')}` : t('select_city', 'Şehir Seçin')}
+      title={country ? `${country.flag} ${t('select_city', 'Şehir / İlçe Seçin')}` : t('select_city', 'Şehir / İlçe Seçin')}
       subtitle={country ? `${country.name} içerisindeki rotanızı belirleyin` : ''}
       theme={theme}
+      scrollable={false}
     >
       <View style={styles.container}>
         {/* Search Bar */}

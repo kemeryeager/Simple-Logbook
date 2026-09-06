@@ -24,6 +24,7 @@ export default function ModalSheet({
   subtitle,
   children,
   theme,
+  scrollable = true,
 }) {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
@@ -280,18 +281,29 @@ export default function ModalSheet({
               </Pressable>
             </View>
 
-            {/* Scrollable Children */}
-            <ScrollView
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: keyboardHeight > 0 ? 36 : 24 },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={true}
-              automaticallyAdjustKeyboardInsets={true}
-            >
-              {children}
-            </ScrollView>
+            {/* Content: Either ScrollView or Plain View for VirtualizedLists */}
+            {scrollable ? (
+              <ScrollView
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  { paddingBottom: keyboardHeight > 0 ? 36 : 24 },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+                automaticallyAdjustKeyboardInsets={true}
+              >
+                {children}
+              </ScrollView>
+            ) : (
+              <View
+                style={[
+                  styles.scrollContent,
+                  { flex: 1, paddingBottom: keyboardHeight > 0 ? 36 : 12 },
+                ]}
+              >
+                {children}
+              </View>
+            )}
           </Animated.View>
         </View>
       </View>
