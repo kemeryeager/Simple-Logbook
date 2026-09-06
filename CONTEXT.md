@@ -1,12 +1,13 @@
-# Project Context: Simple Logbook (v1.0.0)
+# Project Context: Simple Logbook (v1.1.0)
 
-> **Quick Summary:** Fast, offline-first personal travel diary, itinerary planner, and budget tracker mobile application built with React Native & Expo SDK 57. Fully localized in 6 languages with adaptive theming (Light/Dark/System), swipe-to-dismiss gesture modals, and an interactive calendar picker.
+> **Quick Summary:** Fast, offline-first personal travel diary, itinerary planner, and budget tracker mobile application built with React Native & Expo SDK 57. Features a built-in curated destinations directory (39 world cities & 240+ attractions), dynamic city autocomplete, one-tap route planning, 6-language i18n, adaptive theming (Light/Dark/System), swipe-to-dismiss gesture modals, and an interactive calendar picker.
 
 ---
 
 ## 1. Core Tech Stack & Dependencies
 - **Runtime & Tooling:** Expo SDK 57 (`npx expo start`), React Native 0.86, React 19.
 - **Persistence:** `@react-native-async-storage/async-storage` (100% offline-first, client-side).
+- **Safe Area Management:** `react-native-safe-area-context` (Adapts to all screen aspect ratios, iOS notch/home bar, and Android 3-button navigation).
 - **Icons:** `lucide-react-native` (Only use Lucide icons; never install or mix other icon sets).
 - **Build System:** Expo Application Services (EAS Build) via `eas.json` (`preview` profile for Android `.apk`).
 - **Package Identifier:** `com.kemeryeager.simplelogbook` (Android), Slug: `simple-logbook`.
@@ -17,25 +18,29 @@
 ## 2. Project Architecture & File Map
 
 ```text
-├── App.js                     # Root entry point wrapped in SettingsProvider with dynamic StatusBar
-├── app.json                   # Expo config, package name, adaptive icon & EAS projectId
-├── eas.json                   # Build configurations (preview profile creates standalone APK)
+├── App.js                         # Root entry wrapped in SafeAreaProvider & SettingsProvider
+├── app.json                       # Expo config (v1.1.0), package name & EAS projectId
+├── eas.json                       # Build configurations (preview profile creates standalone APK)
+├── data/
+│   └── destinations.js            # Curated offline travel directory (39 cities, 240+ places, search utilities)
 ├── contexts/
-│   └── SettingsContext.js     # Theme management (Light/Dark/System), active language, token dictionary
+│   └── SettingsContext.js         # Theme management (Light/Dark/System), active language, token dictionary
 ├── utils/
-│   ├── storage.js             # Centralized CRUD for Trips, Places, Expenses & Currency Helpers
-│   └── translations.js        # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
+│   ├── storage.js                 # Centralized CRUD for Trips, Places, Expenses & Currency Helpers
+│   └── translations.js            # 6-language dictionary (en, tr, es, de, fr, ja) & `t(key, lang)` helper
 ├── components/
-│   ├── ModalSheet.js          # Bottom sheet modal with PanResponder swipe-to-dismiss gesture
-│   ├── DatePickerModal.js     # Interactive visual monthly calendar picker (no manual date typing)
-│   ├── SettingsModal.js       # Appearance (Light/Dark/System) & Language switcher sheet
-│   ├── BudgetProgress.js      # Real-time animated budget progress bar with multi-currency alerts
-│   ├── TripCard.js            # Memoized route card with dates, city badge & deletion
-│   ├── PlaceCard.js           # Visited spot card with category badge, notes & date
-│   └── ExpenseCard.js         # Expense item card with category icon & formatted currency
+│   ├── ModalSheet.js              # Bottom sheet modal with PanResponder swipe-to-dismiss & keyboard safety
+│   ├── DatePickerModal.js         # Interactive visual monthly calendar picker (no manual date typing)
+│   ├── CityAutocompleteInput.js   # Live city autocomplete with flags, aliases, and popular city chips
+│   ├── ExplorePlacesModal.js      # Curated attraction browser with one-tap "Add to Route" action
+│   ├── SettingsModal.js           # Appearance (Light/Dark/System) & Language switcher sheet
+│   ├── BudgetProgress.js          # Real-time animated budget progress bar with multi-currency alerts
+│   ├── TripCard.js                # Memoized route card with dates, city badge & deletion
+│   ├── PlaceCard.js               # Visited spot card with category badge, notes & date
+│   └── ExpenseCard.js             # Expense item card with category icon & formatted currency
 └── screens/
-    ├── TripListScreen.js      # Main screen: list of trips, search filter, new trip modal, settings trigger
-    └── TripDetailScreen.js    # Detail screen: tab switcher (Places vs Expenses), budget header, add modals
+    ├── TripListScreen.js          # Main screen: trip list, search filter, new trip modal with city autocomplete
+    └── TripDetailScreen.js        # Detail screen: places vs expenses tabs, explore guide trigger, budget header
 ```
 
 ---
