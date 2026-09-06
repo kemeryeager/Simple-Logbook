@@ -10,6 +10,7 @@ import {
   ScrollView,
   Dimensions,
   Keyboard,
+  PanResponder,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
@@ -101,6 +102,36 @@ export default function ModalSheet({
     });
   };
 
+  // PanResponder to handle drag-down to dismiss gesture
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderGrant: () => {
+        slideAnim.stopAnimation();
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          slideAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 110 || gestureState.vy > 0.5) {
+          requestClose();
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            damping: 24,
+            stiffness: 220,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   if (!showModal) return null;
 
   const contentMaxHeight =
@@ -154,63 +185,65 @@ export default function ModalSheet({
               },
             ]}
           >
-            {/* Top Drag Indicator */}
-            <View style={styles.handleContainer}>
-              <View
-                style={[
-                  styles.dragHandle,
-                  theme && { backgroundColor: theme.border },
-                ]}
-              />
-            </View>
-
-            {/* Sheet Header */}
-            <View
-              style={[
-                styles.header,
-                theme && { borderBottomColor: theme.borderMuted },
-              ]}
-            >
-              <View style={styles.headerTextCol}>
-                {title ? (
-                  <Text
-                    style={[
-                      styles.title,
-                      theme && { color: theme.textPrimary },
-                    ]}
-                  >
-                    {title}
-                  </Text>
-                ) : null}
-                {subtitle ? (
-                  <Text
-                    style={[
-                      styles.subtitle,
-                      theme && { color: theme.textMuted },
-                    ]}
-                  >
-                    {subtitle}
-                  </Text>
-                ) : null}
+            {/* Top Drag Indicator & Header (Swipe down enabled) */}
+            <View {...panResponder.panHandlers} collapsable={false}>
+              <View style={styles.handleContainer}>
+                <View
+                  style={[
+                    styles.dragHandle,
+                    theme && { backgroundColor: theme.border },
+                  ]}
+                />
               </View>
 
-              <Pressable
-                onPress={requestClose}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  theme && { backgroundColor: theme.btnSecondaryBg },
-                  pressed && {
-                    backgroundColor: theme ? theme.border : '#E4E4E7',
-                  },
+              {/* Sheet Header */}
+              <View
+                style={[
+                  styles.header,
+                  theme && { borderBottomColor: theme.borderMuted },
                 ]}
               >
-                <X
-                  size={16}
-                  color={theme ? theme.textMuted : '#71717A'}
-                  strokeWidth={2.4}
-                />
-              </Pressable>
+                <View style={styles.headerTextCol}>
+                  {title ? (
+                    <Text
+                      style={[
+                        styles.title,
+                        theme && { color: theme.textPrimary },
+                      ]}
+                    >
+                      {title}
+                    </Text>
+                  ) : null}
+                  {subtitle ? (
+                    <Text
+                      style={[
+                        styles.subtitle,
+                        theme && { color: theme.textMuted },
+                      ]}
+                    >
+                      {subtitle}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <Pressable
+                  onPress={requestClose}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    styles.closeButton,
+                    theme && { backgroundColor: theme.btnSecondaryBg },
+                    pressed && {
+                      backgroundColor: theme ? theme.border : '#E4E4E7',
+                    },
+                  ]}
+                >
+                  <X
+                    size={16}
+                    color={theme ? theme.textMuted : '#71717A'}
+                    strokeWidth={2.4}
+                  />
+                </Pressable>
+              </View>
             </View>
 
             {/* Scrollable Children */}

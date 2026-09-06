@@ -28,6 +28,7 @@ import BudgetProgress from '../components/BudgetProgress';
 import PlaceCard from '../components/PlaceCard';
 import ExpenseCard from '../components/ExpenseCard';
 import ModalSheet from '../components/ModalSheet';
+import DatePickerModal from '../components/DatePickerModal';
 import { useSettings } from '../contexts/SettingsContext';
 import {
   formatDateRange,
@@ -105,6 +106,9 @@ export default function TripDetailScreen({
   const [expenseCategory, setExpenseCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [expenseDate, setExpenseDate] = useState('');
   const [expenseError, setExpenseError] = useState('');
+
+  // Date Picker State ('place' | 'expense' | null)
+  const [datePickerTarget, setDatePickerTarget] = useState(null);
 
   // FAB scale animation
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -933,20 +937,28 @@ export default function TripDetailScreen({
                 {t('visit_date')}
               </Text>
             </View>
-            <TextInput
-              style={[
-                styles.textInput,
+            <Pressable
+              onPress={() => setDatePickerTarget('place')}
+              style={({ pressed }) => [
+                styles.dateSelectBtn,
                 {
                   backgroundColor: theme.inputBg,
                   borderColor: theme.border,
-                  color: theme.textPrimary,
                 },
+                pressed && { opacity: 0.75 },
               ]}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.textMuted}
-              value={placeDate}
-              onChangeText={setPlaceDate}
-            />
+            >
+              <Text
+                style={[
+                  styles.dateSelectBtnText,
+                  { color: placeDate ? theme.textPrimary : theme.textMuted },
+                ]}
+                numberOfLines={1}
+              >
+                {placeDate || 'YYYY-MM-DD'}
+              </Text>
+              <Calendar size={14} color={theme.textMuted} strokeWidth={1.8} />
+            </Pressable>
           </View>
 
           <View style={styles.inputGroup}>
@@ -1119,20 +1131,28 @@ export default function TripDetailScreen({
                 {t('expense_date')}
               </Text>
             </View>
-            <TextInput
-              style={[
-                styles.textInput,
+            <Pressable
+              onPress={() => setDatePickerTarget('expense')}
+              style={({ pressed }) => [
+                styles.dateSelectBtn,
                 {
                   backgroundColor: theme.inputBg,
                   borderColor: theme.border,
-                  color: theme.textPrimary,
                 },
+                pressed && { opacity: 0.75 },
               ]}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.textMuted}
-              value={expenseDate}
-              onChangeText={setExpenseDate}
-            />
+            >
+              <Text
+                style={[
+                  styles.dateSelectBtnText,
+                  { color: expenseDate ? theme.textPrimary : theme.textMuted },
+                ]}
+                numberOfLines={1}
+              >
+                {expenseDate || 'YYYY-MM-DD'}
+              </Text>
+              <Calendar size={14} color={theme.textMuted} strokeWidth={1.8} />
+            </Pressable>
           </View>
 
           <View style={styles.modalButtonsRow}>
@@ -1156,6 +1176,21 @@ export default function TripDetailScreen({
           </View>
         </View>
       </ModalSheet>
+
+      {/* Date Picker Modal for Place / Expense Date */}
+      <DatePickerModal
+        visible={datePickerTarget !== null}
+        onClose={() => setDatePickerTarget(null)}
+        title={datePickerTarget === 'place' ? t('visit_date') : t('expense_date')}
+        selectedDate={datePickerTarget === 'place' ? placeDate : expenseDate}
+        onSelectDate={(selected) => {
+          if (datePickerTarget === 'place') {
+            setPlaceDate(selected);
+          } else if (datePickerTarget === 'expense') {
+            setExpenseDate(selected);
+          }
+        }}
+      />
     </View>
   );
 }
@@ -1357,6 +1392,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
+  },
+  dateSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateSelectBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   textAreaInput: {
     minHeight: 70,

@@ -26,6 +26,7 @@ import {
 import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
 import SettingsModal from '../components/SettingsModal';
+import DatePickerModal from '../components/DatePickerModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
@@ -49,6 +50,9 @@ export default function TripListScreen({ onSelectTrip }) {
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState('₺');
   const [formError, setFormError] = useState('');
+
+  // Date Picker State ('start' | 'end' | null)
+  const [datePickerTarget, setDatePickerTarget] = useState(null);
 
   // FAB scale animation
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -428,20 +432,28 @@ export default function TripListScreen({ onSelectTrip }) {
                   {t('start_date')}
                 </Text>
               </View>
-              <TextInput
-                style={[
-                  styles.textInput,
+              <Pressable
+                onPress={() => setDatePickerTarget('start')}
+                style={({ pressed }) => [
+                  styles.dateSelectBtn,
                   {
                     backgroundColor: theme.inputBg,
                     borderColor: theme.border,
-                    color: theme.textPrimary,
                   },
+                  pressed && { opacity: 0.75 },
                 ]}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={theme.textMuted}
-                value={startDate}
-                onChangeText={setStartDate}
-              />
+              >
+                <Text
+                  style={[
+                    styles.dateSelectBtnText,
+                    { color: startDate ? theme.textPrimary : theme.textMuted },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {startDate || 'YYYY-MM-DD'}
+                </Text>
+                <Calendar size={14} color={theme.textMuted} strokeWidth={1.8} />
+              </Pressable>
             </View>
 
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 6 }]}>
@@ -451,20 +463,28 @@ export default function TripListScreen({ onSelectTrip }) {
                   {t('end_date')}
                 </Text>
               </View>
-              <TextInput
-                style={[
-                  styles.textInput,
+              <Pressable
+                onPress={() => setDatePickerTarget('end')}
+                style={({ pressed }) => [
+                  styles.dateSelectBtn,
                   {
                     backgroundColor: theme.inputBg,
                     borderColor: theme.border,
-                    color: theme.textPrimary,
                   },
+                  pressed && { opacity: 0.75 },
                 ]}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={theme.textMuted}
-                value={endDate}
-                onChangeText={setEndDate}
-              />
+              >
+                <Text
+                  style={[
+                    styles.dateSelectBtnText,
+                    { color: endDate ? theme.textPrimary : theme.textMuted },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {endDate || 'YYYY-MM-DD'}
+                </Text>
+                <Calendar size={14} color={theme.textMuted} strokeWidth={1.8} />
+              </Pressable>
             </View>
           </View>
 
@@ -555,6 +575,21 @@ export default function TripListScreen({ onSelectTrip }) {
           </View>
         </View>
       </ModalSheet>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={datePickerTarget !== null}
+        onClose={() => setDatePickerTarget(null)}
+        title={datePickerTarget === 'start' ? t('start_date') : t('end_date')}
+        selectedDate={datePickerTarget === 'start' ? startDate : endDate}
+        onSelectDate={(selected) => {
+          if (datePickerTarget === 'start') {
+            setStartDate(selected);
+          } else if (datePickerTarget === 'end') {
+            setEndDate(selected);
+          }
+        }}
+      />
     </View>
   );
 }
@@ -767,6 +802,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
+  },
+  dateSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateSelectBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   rowTwoCols: {
     flexDirection: 'row',
