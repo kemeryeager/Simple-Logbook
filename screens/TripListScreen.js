@@ -23,6 +23,7 @@ import {
   Wallet,
   Settings,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TripCard from '../components/TripCard';
 import ModalSheet from '../components/ModalSheet';
 import SettingsModal from '../components/SettingsModal';
@@ -31,6 +32,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { getTrips, saveTrip, deleteTrip, getTripStats, WORLD_CURRENCIES } from '../utils/storage';
 
 export default function TripListScreen({ onSelectTrip }) {
+  const insets = useSafeAreaInsets();
   const { theme, t, isDark } = useSettings();
   const [trips, setTrips] = useState([]);
   const [tripStats, setTripStats] = useState({});
@@ -193,10 +195,11 @@ export default function TripListScreen({ onSelectTrip }) {
     }).start();
   };
 
-  const statusBarPadding = Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12;
+  const topSafeArea = Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12);
+  const bottomSafeArea = Math.max(insets.bottom, 16);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: statusBarPadding }]}>
+    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: topSafeArea }]}>
       {/* App Top Bar */}
       <View style={styles.topBar}>
         <View style={styles.brandingCol}>
@@ -268,6 +271,7 @@ export default function TripListScreen({ onSelectTrip }) {
         removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={[
           styles.listContent,
+          { paddingBottom: bottomSafeArea + 80 },
           filteredTrips.length === 0 && styles.listContentEmpty,
         ]}
         refreshControl={
@@ -299,18 +303,28 @@ export default function TripListScreen({ onSelectTrip }) {
           ) : null
         }
         ListEmptyComponent={
-          !loading && (
+          searchQuery.trim().length > 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: theme.btnSecondaryBg }]}>
+                <Search size={28} color={theme.textMuted} strokeWidth={1.8} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+                {t('search_empty_title')}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
+                {t('search_empty_subtitle', { query: searchQuery })}
+              </Text>
+            </View>
+          ) : (
             <View style={styles.emptyContainer}>
               <View style={[styles.emptyIconCircle, { backgroundColor: theme.btnSecondaryBg }]}>
                 <Compass size={32} color={theme.textMuted} strokeWidth={1.8} />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-                {searchQuery ? t('search_empty_title') : t('no_trips_title')}
+                {t('no_trips_title')}
               </Text>
               <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
-                {searchQuery
-                  ? t('search_empty_subtitle')
-                  : t('no_trips_subtitle')}
+                {t('no_trips_subtitle')}
               </Text>
               <Pressable
                 onPress={handleOpenAddModal}
@@ -326,8 +340,13 @@ export default function TripListScreen({ onSelectTrip }) {
         }
       />
 
-      {/* Floating Action Button (Always at bottom right) */}
-      <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
+      {/* Floating Action Button (Dynamically placed above system navigation bar) */}
+      <Animated.View
+        style={[
+          styles.fabContainer,
+          { bottom: bottomSafeArea + 12, transform: [{ scale: fabScale }] },
+        ]}
+      >
         <Pressable
           onPress={handleOpenAddModal}
           onPressIn={handleFabPressIn}

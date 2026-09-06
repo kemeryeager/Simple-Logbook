@@ -12,6 +12,7 @@ import {
   Keyboard,
   PanResponder,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -24,6 +25,7 @@ export default function ModalSheet({
   children,
   theme,
 }) {
+  const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -181,12 +183,15 @@ export default function ModalSheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} />
         </Animated.View>
 
-        {/* Bottom Sheet Container dynamically lifting with keyboard */}
+        {/* Bottom Sheet Container dynamically lifting with keyboard & respecting bottom navigation bar */}
         <View
           style={[
             styles.sheetContainer,
             {
-              paddingBottom: keyboardHeight > 0 ? keyboardHeight : (Platform.OS === 'ios' ? 24 : 12),
+              paddingBottom:
+                keyboardHeight > 0
+                  ? keyboardHeight + 8
+                  : Math.max(insets.bottom + 8, Platform.OS === 'ios' ? 24 : 16),
             },
           ]}
         >

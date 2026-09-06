@@ -24,6 +24,7 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BudgetProgress from '../components/BudgetProgress';
 import PlaceCard from '../components/PlaceCard';
 import ExpenseCard from '../components/ExpenseCard';
@@ -72,6 +73,7 @@ export default function TripDetailScreen({
   onTripDeleted,
   onTripUpdated,
 }) {
+  const insets = useSafeAreaInsets();
   const { theme, t, isDark, language } = useSettings();
   const [currentTrip, setCurrentTrip] = useState(trip);
   const [activeTab, setActiveTab] = useState('places'); // 'places' | 'expenses'
@@ -379,10 +381,11 @@ export default function TripDetailScreen({
   };
 
   const dateSpan = formatDateRange(currentTrip.startDate, currentTrip.endDate, language);
-  const statusBarPadding = Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12;
+  const topSafeArea = Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight || 24 : 12);
+  const bottomSafeArea = Math.max(insets.bottom, 16);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: statusBarPadding }]}>
+    <View style={[styles.container, { backgroundColor: theme.canvas, paddingTop: topSafeArea }]}>
       {/* Top Navigation Bar */}
       <View
         style={[
@@ -450,7 +453,10 @@ export default function TripDetailScreen({
             colors={[theme.textPrimary]}
           />
         }
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingBottom: bottomSafeArea + 80 },
+        ]}
         ListHeaderComponent={
           <View>
             {/* Dates banner if available */}
@@ -733,8 +739,13 @@ export default function TripDetailScreen({
         }
       />
 
-      {/* Floating Action Button */}
-      <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
+      {/* Floating Action Button (Dynamically positioned above system navigation bar) */}
+      <Animated.View
+        style={[
+          styles.fabContainer,
+          { bottom: bottomSafeArea + 12, transform: [{ scale: fabScale }] },
+        ]}
+      >
         <Pressable
           onPress={activeTab === 'places' ? handleOpenAddPlace : handleOpenAddExpense}
           onPressIn={handleFabPressIn}

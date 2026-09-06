@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, BackHandler } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import TripListScreen from './screens/TripListScreen';
 import TripDetailScreen from './screens/TripDetailScreen';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
@@ -57,9 +58,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <AppContent />
-    </SettingsProvider>
+    <SafeAreaProvider>
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
 
