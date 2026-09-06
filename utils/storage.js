@@ -25,61 +25,10 @@ export const WORLD_CURRENCIES = [
   { code: 'CNY', symbol: 'CN¥', label: 'CN¥ CNY', name: 'Çin Yuanı' },
 ];
 
-// Seed sample trip if first time launching for delightful initial experience
-export const INITIAL_TRIPS = [
-  {
-    id: 'sample-trip-1',
-    title: 'Ege & Akdeniz Kaçamağı',
-    city: 'Antalya, Kaş',
-    startDate: '2026-06-15',
-    endDate: '2026-06-22',
-    budget: 25000,
-    currency: '₺',
-    createdAt: '2026-06-01T10:00:00.000Z',
-  },
-];
-
-export const INITIAL_PLACES = [
-  {
-    id: 'sample-place-1',
-    tripId: 'sample-trip-1',
-    name: 'Kaputaş Plajı',
-    notes: 'Turkuaz deniz ve sabah erken saatte gitmek şart.',
-    category: 'Doğa / Plaj',
-    date: '2026-06-16',
-    createdAt: '2026-06-01T10:05:00.000Z',
-  },
-  {
-    id: 'sample-place-2',
-    tripId: 'sample-trip-1',
-    name: 'Antik Tiyatro',
-    notes: 'Gün batımında harika manzara.',
-    category: 'Tarihi Yer',
-    date: '2026-06-17',
-    createdAt: '2026-06-01T10:10:00.000Z',
-  },
-];
-
-export const INITIAL_EXPENSES = [
-  {
-    id: 'sample-expense-1',
-    tripId: 'sample-trip-1',
-    title: 'Kaş Butik Otel (3 Gece)',
-    amount: 10500,
-    category: 'Konaklama',
-    date: '2026-06-15',
-    createdAt: '2026-06-01T10:15:00.000Z',
-  },
-  {
-    id: 'sample-expense-2',
-    tripId: 'sample-trip-1',
-    title: 'Akşam Yemeği - Balıkçılar',
-    amount: 2400,
-    category: 'Yeme / İçme',
-    date: '2026-06-16',
-    createdAt: '2026-06-01T10:20:00.000Z',
-  },
-];
+// Default initial empty data collections
+export const INITIAL_TRIPS = [];
+export const INITIAL_PLACES = [];
+export const INITIAL_EXPENSES = [];
 
 // --- UTILITIES & PARSING ---
 
@@ -361,15 +310,30 @@ export const getTrips = async () => {
   try {
     const json = await AsyncStorage.getItem(KEYS.TRIPS);
     if (json === null) {
-      // First launch seed
+      // First launch: initialize clean empty storage
       await AsyncStorage.multiSet([
-        [KEYS.TRIPS, JSON.stringify(INITIAL_TRIPS)],
-        [KEYS.PLACES, JSON.stringify(INITIAL_PLACES)],
-        [KEYS.EXPENSES, JSON.stringify(INITIAL_EXPENSES)],
+        [KEYS.TRIPS, JSON.stringify([])],
+        [KEYS.PLACES, JSON.stringify([])],
+        [KEYS.EXPENSES, JSON.stringify([])],
       ]);
-      return sortTripsByDate(INITIAL_TRIPS, 'desc');
+      return [];
     }
-    const trips = safeJsonParse(json, []);
+    let trips = safeJsonParse(json, []);
+    // Clean up sample trip from earlier development if still present in device storage
+    if (trips.some((t) => t.id === 'sample-trip-1')) {
+      trips = trips.filter((t) => t.id !== 'sample-trip-1');
+      await AsyncStorage.setItem(KEYS.TRIPS, JSON.stringify(trips));
+      try {
+        const pJson = await AsyncStorage.getItem(KEYS.PLACES);
+        const eJson = await AsyncStorage.getItem(KEYS.EXPENSES);
+        const places = safeJsonParse(pJson, []).filter((p) => p.tripId !== 'sample-trip-1');
+        const expenses = safeJsonParse(eJson, []).filter((e) => e.tripId !== 'sample-trip-1');
+        await AsyncStorage.multiSet([
+          [KEYS.PLACES, JSON.stringify(places)],
+          [KEYS.EXPENSES, JSON.stringify(expenses)],
+        ]);
+      } catch (_) {}
+    }
     return sortTripsByDate(trips, 'desc');
   } catch (error) {
     console.error('Error fetching trips:', error);
